@@ -803,3 +803,56 @@ git commit -m "Meaningful Commit Message"
 
 git push origin backend-dev
 ```
+
+
+# Creating Python Virtual Environment (Linux)
+
+This step is required only once after cloning the repository.
+
+Go to backend
+
+```bash
+cd ~/Documents/LavernaEvents_Project/lavernaevents/backend
+```
+
+Create virtual environment
+
+```bash
+python3 -m venv venv
+```
+
+Activate
+
+```bash
+source venv/bin/activate
+```
+
+Upgrade pip
+
+```bash
+pip install --upgrade pip
+```
+
+Install dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+Run migrations
+
+```bash
+python manage.py migrate
+```
+
+Run server
+
+```bash
+python manage.py runserver
+```
+
+Deactivate
+
+```bash
+deactivate
+```

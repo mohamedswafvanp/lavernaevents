@@ -829,3 +829,62 @@ git commit -m "Meaningful Commit Message"
 
 git push origin frontend-dev
 ```
+
+
+# Creating Python Virtual Environment (Windows)
+
+The backend code is required locally for API testing.
+
+Go to backend
+
+```powershell
+cd Documents\LavernaEvents_Project\lavernaevents\backend
+```
+
+Create virtual environment
+
+```powershell
+python -m venv venv
+```
+
+Allow activation (first time only)
+
+```powershell
+Set-ExecutionPolicy -Scope Process RemoteSigned
+```
+
+Activate virtual environment
+
+```powershell
+.\venv\Scripts\Activate
+```
+
+Upgrade pip
+
+```powershell
+python -m pip install --upgrade pip
+```
+
+Install dependencies
+
+```powershell
+pip install -r requirements.txt
+```
+
+Run migrations
+
+```powershell
+python manage.py migrate
+```
+
+Run backend
+
+```powershell
+python manage.py runserver
+```
+
+Deactivate
+
+```powershell
+deactivate
+```
