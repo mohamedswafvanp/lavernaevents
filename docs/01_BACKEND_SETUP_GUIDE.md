@@ -698,3 +698,108 @@ Document every API.
 Keep business logic inside services or application modules.
 
 Maintain production-ready coding standards throughout the project.
+
+
+# Running the Complete Project (Backend Developer)
+
+The backend developer must run both the Django backend and the React frontend during development.
+
+---
+
+## Terminal 1 - Backend Server
+
+Go to project
+
+```bash
+cd ~/Documents/LavernaEvents_Project/lavernaevents/backend
+```
+
+Activate Virtual Environment
+
+```bash
+source venv/bin/activate
+```
+
+Run Django
+
+```bash
+python manage.py runserver
+```
+
+Backend URL
+
+```
+http://127.0.0.1:8000
+```
+
+Admin Panel
+
+```
+http://127.0.0.1:8000/admin/
+```
+
+---
+
+## Terminal 2 - Frontend Server
+
+Open another terminal.
+
+Go to frontend
+
+```bash
+cd ~/Documents/LavernaEvents_Project/lavernaevents/frontend
+```
+
+Install packages (only if package.json changes)
+
+```bash
+npm install
+```
+
+Run React
+
+```bash
+npm run dev
+```
+
+Frontend URL
+
+```
+http://localhost:5173
+```
+
+---
+
+## Daily Startup Commands
+
+Backend Terminal
+
+```bash
+cd ~/Documents/LavernaEvents_Project/lavernaevents/backend
+
+source venv/bin/activate
+
+python manage.py runserver
+```
+
+Frontend Terminal
+
+```bash
+cd ~/Documents/LavernaEvents_Project/lavernaevents/frontend
+
+npm run dev
+```
+
+---
+
+## Before Ending Work
+
+```bash
+git status
+
+git add .
+
+git commit -m "Meaningful Commit Message"
+
+git push origin backend-dev
+```

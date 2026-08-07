@@ -712,3 +712,120 @@ documentation.
 Build a production-ready, responsive, reusable React application using TypeScript and modern frontend best practices.
 
 Maintain clean code, modular components, and a scalable architecture suitable for long-term development.
+
+
+# Running the Complete Project (Frontend Developer)
+
+The frontend developer must also run the Django backend locally to test API integration.
+
+The backend code is read-only unless instructed otherwise.
+
+---
+
+## PowerShell 1 - Backend
+
+Go to backend
+
+```powershell
+cd Documents\LavernaEvents_Project\lavernaevents\backend
+```
+
+Activate Virtual Environment
+
+```powershell
+.\venv\Scripts\Activate
+```
+
+If PowerShell blocks activation
+
+```powershell
+Set-ExecutionPolicy -Scope Process RemoteSigned
+```
+
+Then activate again
+
+```powershell
+.\venv\Scripts\Activate
+```
+
+Run Django
+
+```powershell
+python manage.py runserver
+```
+
+Backend
+
+```
+http://127.0.0.1:8000
+```
+
+Admin
+
+```
+http://127.0.0.1:8000/admin/
+```
+
+---
+
+## PowerShell 2 - Frontend
+
+Go to frontend
+
+```powershell
+cd Documents\LavernaEvents_Project\lavernaevents\frontend
+```
+
+Install packages (only when required)
+
+```powershell
+npm install
+```
+
+Run React
+
+```powershell
+npm run dev
+```
+
+Frontend
+
+```
+http://localhost:5173
+```
+
+---
+
+## Daily Startup Commands
+
+Backend
+
+```powershell
+cd Documents\LavernaEvents_Project\lavernaevents\backend
+
+.\venv\Scripts\Activate
+
+python manage.py runserver
+```
+
+Frontend
+
+```powershell
+cd Documents\LavernaEvents_Project\lavernaevents\frontend
+
+npm run dev
+```
+
+---
+
+## Before Ending Work
+
+```powershell
+git status
+
+git add .
+
+git commit -m "Meaningful Commit Message"
+
+git push origin frontend-dev
+```
