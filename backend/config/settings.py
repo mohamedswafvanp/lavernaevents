@@ -22,14 +22,18 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # --------------------------------------------------
 
 SECRET_KEY = config(
-    "SECRET_KEY",
+    "DJANGO_SECRET_KEY",
     default="django-insecure-development-only-change-this"
 )
 
-DEBUG = config("DEBUG", default=True, cast=bool)
+DEBUG = config(
+    "DJANGO_DEBUG",
+    default=True,
+    cast=bool
+)
 
 ALLOWED_HOSTS = config(
-    "ALLOWED_HOSTS",
+    "DJANGO_ALLOWED_HOSTS",
     default="localhost,127.0.0.1"
 ).split(",")
 
