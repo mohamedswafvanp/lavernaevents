@@ -1,18 +1,17 @@
 
+import { BrowserRouter, Route, Routes } from "react-router-dom"
 import PublicLayout from "./layouts/PublicLayout"
-import Footer from "./components/public/Footer"
-import Navbar from "./components/public/Navbar"
 import Home from "./pages/public/Home"
 
 function App() {
 	return (
-		<PublicLayout>
-			<Navbar />
-			<main>
-				<Home />
-			</main>
-			<Footer />
-		</PublicLayout>
+		<BrowserRouter>
+			<Routes>
+				<Route element={<PublicLayout />}>
+					<Route index element={<Home />} />
+				</Route>
+			</Routes>
+		</BrowserRouter>
 	)
 }
 
