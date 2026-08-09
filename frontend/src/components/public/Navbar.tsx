@@ -2,8 +2,8 @@ import { Menu, X } from "lucide-react"
 import { useState } from "react"
 
 const links = [
-	{ label: "Home", href: "#home" },
-	{ label: "About", href: "#about" },
+	{ label: "Home", href: "/" },
+	{ label: "About", href: "/about" },
 	{ label: "Features", href: "#features" },
 	{ label: "Pricing", href: "#pricing" },
 	{ label: "Gallery", href: "#gallery" },
@@ -21,7 +21,7 @@ function Navbar() {
 				className="mx-auto flex min-h-20 max-w-7xl items-center justify-between px-5 py-4 sm:px-8 lg:px-10"
 			>
 				<a
-					href="#home"
+					href="/"
 					className="text-lg font-bold tracking-[0.16em] text-[var(--brand-navy)] sm:text-xl"
 				>
 					LAVERNA <span className="text-[var(--brand-pink)]">EVENTS</span>
