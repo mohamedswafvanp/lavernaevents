@@ -221,19 +221,23 @@ REST_FRAMEWORK = {
 # --------------------------------------------------
 # JWT
 # --------------------------------------------------
-
 SIMPLE_JWT = {
-
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=60),
-
-    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
-
-    "ROTATE_REFRESH_TOKENS": True,
-
-    "BLACKLIST_AFTER_ROTATION": False,
-
+    "ACCESS_TOKEN_LIFETIME": timedelta(
+        minutes=config(
+            "JWT_ACCESS_TOKEN_MINUTES",
+            default=15,
+            cast=int,
+        )
+    ),
+    "REFRESH_TOKEN_LIFETIME": timedelta(
+        days=config(
+            "JWT_REFRESH_TOKEN_DAYS",
+            default=7,
+            cast=int,
+        )
+    ),
     "AUTH_HEADER_TYPES": ("Bearer",),
-
+    "UPDATE_LAST_LOGIN": True,
 }
 
 # --------------------------------------------------

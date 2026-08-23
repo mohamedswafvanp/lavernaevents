@@ -2,8 +2,12 @@ from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.exceptions import AuthenticationFailed
 
-from .serializers import UserRegistrationSerializer
+from .serializers import (
+    UserLoginSerializer,
+    UserRegistrationSerializer,
+)
 
 
 class UserRegistrationView(APIView):
@@ -45,4 +49,46 @@ class UserRegistrationView(APIView):
                 },
             },
             status=status.HTTP_201_CREATED,
+        )
+
+
+class UserLoginView(APIView):
+    """Authenticate a user using mobile number and password."""
+
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        """Validate credentials and return JWT tokens."""
+
+        serializer = UserLoginSerializer(
+            data=request.data
+        )
+
+        try:
+            serializer.is_valid(raise_exception=True)
+        except AuthenticationFailed:
+            return Response(
+                {
+                    "success": False,
+                    "message": "Invalid mobile number or password.",
+                    "errors": {
+                        "authentication": [
+                            "Invalid credentials."
+                        ]
+                    },
+                },
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        return Response(
+            {
+                "success": True,
+                "message": "Login successful.",
+                "data": {
+                    "access": serializer.validated_data["access"],
+                    "refresh": serializer.validated_data["refresh"],
+                    "user": serializer.validated_data["user"],
+                },
+            },
+            status=status.HTTP_200_OK,
         )
