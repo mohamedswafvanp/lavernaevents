@@ -1,5 +1,6 @@
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 from .models import User
 
@@ -117,3 +118,28 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         )
 
         return user
+
+
+class UserLoginSerializer(TokenObtainPairSerializer):
+    """Serializer for mobile-number based JWT login."""
+
+    username_field = "mobile_number"
+
+    def validate(self, attrs: dict) -> dict:
+        """Validate credentials and generate JWT tokens."""
+
+        data = super().validate(attrs)
+
+        user = self.user
+
+        data["user"] = {
+            "id": user.id,
+            "full_name": user.full_name,
+            "email": user.email,
+            "mobile_number": user.mobile_number,
+            "role": user.role,
+            "is_verified": user.is_verified,
+            "is_active": user.is_active,
+        }
+
+        return data
