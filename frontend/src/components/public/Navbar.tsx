@@ -5,10 +5,10 @@ const links = [
 	{ label: "Home", href: "/" },
 	{ label: "About", href: "/about" },
 	{ label: "Features", href: "#features" },
-	{ label: "Pricing", href: "#pricing" },
-	{ label: "Gallery", href: "#gallery" },
-	{ label: "FAQ", href: "#faq" },
-	{ label: "Contact", href: "#contact" },
+	{ label: "Pricing", href: "/pricing" },
+	{ label: "Gallery", href: "/gallery" },
+	{ label: "FAQ", href: "/faq" },
+	{ label: "Contact", href: "/contact" },
 ]
 
 function Navbar() {
