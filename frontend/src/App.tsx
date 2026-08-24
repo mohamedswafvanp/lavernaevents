@@ -2,6 +2,7 @@
 import { BrowserRouter, Route, Routes } from "react-router-dom"
 import PublicLayout from "./layouts/PublicLayout"
 import About from "./pages/public/About"
+import Account from "./pages/public/Account"
 import Contact from "./pages/public/Contact"
 import FAQ from "./pages/public/FAQ"
 import Gallery from "./pages/public/Gallery"
@@ -23,6 +24,7 @@ function App() {
 					<Route path="contact" element={<Contact />} />
 					<Route path="login" element={<Login />} />
 					<Route path="register" element={<Register />} />
+					<Route path="account" element={<Account />} />
 				</Route>
 			</Routes>
 		</BrowserRouter>
