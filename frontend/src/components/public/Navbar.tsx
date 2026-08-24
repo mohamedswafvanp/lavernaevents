@@ -38,13 +38,13 @@ function Navbar() {
 						</a>
 					))}
 					<a
-						href="#login"
+						href="/login"
 						className="text-sm font-semibold text-[var(--brand-navy)] transition-colors hover:text-[var(--brand-pink)]"
 					>
 						Login
 					</a>
 					<a
-						href="#register"
+						href="/register"
 						className="rounded-md bg-[var(--brand-pink)] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[var(--brand-pink-dark)]"
 					>
 						Register
@@ -66,7 +66,7 @@ function Navbar() {
 			{isMenuOpen && (
 				<div id="mobile-navigation" className="border-t border-slate-100 bg-white px-5 pb-5 lg:hidden">
 					<div className="mx-auto flex max-w-7xl flex-col gap-1 pt-3">
-						{[...links, { label: "Login", href: "#login" }].map((link) => (
+						{[...links, { label: "Login", href: "/login" }].map((link) => (
 							<a
 								key={link.label}
 								href={link.href}
@@ -77,7 +77,7 @@ function Navbar() {
 							</a>
 						))}
 						<a
-							href="#register"
+							href="/register"
 							onClick={() => setIsMenuOpen(false)}
 							className="mt-2 rounded-md bg-[var(--brand-pink)] px-3 py-3 text-center text-sm font-semibold text-white hover:bg-[var(--brand-pink-dark)]"
 						>

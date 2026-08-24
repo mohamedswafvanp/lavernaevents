@@ -6,7 +6,9 @@ import Contact from "./pages/public/Contact"
 import FAQ from "./pages/public/FAQ"
 import Gallery from "./pages/public/Gallery"
 import Home from "./pages/public/Home"
+import Login from "./pages/public/Login"
 import Pricing from "./pages/public/Pricing"
+import Register from "./pages/public/Register"
 
 function App() {
 	return (
@@ -19,6 +21,8 @@ function App() {
 					<Route path="gallery" element={<Gallery />} />
 					<Route path="faq" element={<FAQ />} />
 					<Route path="contact" element={<Contact />} />
+					<Route path="login" element={<Login />} />
+					<Route path="register" element={<Register />} />
 				</Route>
 			</Routes>
 		</BrowserRouter>
