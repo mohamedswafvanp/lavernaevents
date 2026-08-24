@@ -1,6 +1,6 @@
 import { motion } from "framer-motion"
 import { CalendarDays, Camera, MessageCircle, Users } from "lucide-react"
-import heroGraphic from "../../assets/hero.png"
+import lavernaLogo from "../../assets/laverna-logo.png"
 
 const features = [
 	{
@@ -61,16 +61,13 @@ function Home() {
 					</div>
 				</div>
 
-				<div className="relative flex min-h-72 items-center justify-center rounded-3xl bg-[var(--brand-navy)] px-10 py-12 sm:min-h-96 lg:min-h-[30rem]">
-					<div className="absolute inset-5 rounded-2xl border border-white/15" />
+				<div className="relative flex min-h-72 items-center justify-center rounded-3xl bg-white px-10 py-12 sm:min-h-96 lg:min-h-[30rem]">
+					<div className="absolute inset-5 rounded-2xl border border-slate-100" />
 					<img
-						src={heroGraphic}
-						alt="Abstract celebration detail"
-						className="relative w-56 max-w-full sm:w-72"
+						src={lavernaLogo}
+						alt="Laverna Events"
+						className="relative w-80 max-w-full sm:w-96 lg:w-[28rem] object-contain"
 					/>
-					<p className="absolute bottom-8 left-0 right-0 text-center text-xs font-medium uppercase tracking-[0.18em] text-white/65">
-						Plan beautifully. Celebrate fully.
-					</p>
 				</div>
 			</motion.div>
 
