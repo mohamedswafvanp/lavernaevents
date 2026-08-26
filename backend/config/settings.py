@@ -58,8 +58,10 @@ INSTALLED_APPS = [
     "django_filters",
 
     # Local Apps
+    "common",
     "users",
     "memberships",
+    "payments",
     "events",
     "guests",
     "invitations",
@@ -216,6 +218,16 @@ REST_FRAMEWORK = {
 
     "DEFAULT_FILTER_BACKENDS": (
         "django_filters.rest_framework.DjangoFilterBackend",
+    ),
+
+    "DEFAULT_PAGINATION_CLASS": (
+        "common.pagination.StandardResultsPagination"
+    ),
+
+    "PAGE_SIZE": 20,
+
+    "EXCEPTION_HANDLER": (
+        "common.exceptions.custom_exception_handler"
     ),
 }
 

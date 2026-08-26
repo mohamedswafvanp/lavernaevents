@@ -6,6 +6,7 @@ from .views import (
     MembershipPlanListView,
     MySubscriptionView,
     MyUsageView,
+    PortalAccessView,
     SubscribeView,
 )
 
@@ -17,4 +18,5 @@ urlpatterns = [
     path("change-plan/", ChangePlanView.as_view(), name="change-plan"),
     path("my-subscription/", MySubscriptionView.as_view(), name="my-subscription"),
     path("my-usage/", MyUsageView.as_view(), name="my-usage"),
+    path("portal-access/", PortalAccessView.as_view(), name="portal-access"),
 ]

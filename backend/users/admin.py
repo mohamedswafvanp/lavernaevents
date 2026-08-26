@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 
-from .models import User
+from .models import EmailOTP, User
 
 
 @admin.register(User)
@@ -113,4 +113,35 @@ class CustomUserAdmin(UserAdmin):
                 ),
             },
         ),
+    )
+
+
+@admin.register(EmailOTP)
+class EmailOTPAdmin(admin.ModelAdmin):
+    """Admin configuration for viewing email verification OTPs (for debugging)."""
+
+    list_display = (
+        "user",
+        "code",
+        "is_used",
+        "expires_at",
+        "created_at",
+    )
+
+    list_filter = (
+        "is_used",
+    )
+
+    search_fields = (
+        "user__email",
+        "user__mobile_number",
+        "code",
+    )
+
+    ordering = (
+        "-created_at",
+    )
+
+    readonly_fields = (
+        "created_at",
     )

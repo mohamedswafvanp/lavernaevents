@@ -1,6 +1,9 @@
+import random
+
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
-from django.db import models
 from django.core.validators import FileExtensionValidator
+from django.db import models
+from django.utils import timezone
 
 from .managers import UserManager
 
@@ -81,3 +84,62 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self) -> str:
         return f"{self.full_name} ({self.mobile_number})"
+
+
+class EmailOTP(models.Model):
+    """A one-time password sent to a user's email for verification purposes."""
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="email_otps",
+    )
+
+    code = models.CharField(
+        max_length=6,
+    )
+
+    is_used = models.BooleanField(
+        default=False,
+    )
+
+    expires_at = models.DateTimeField()
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    class Meta:
+        db_table = "email_otps"
+        ordering = ["-created_at"]
+
+    def __str__(self) -> str:
+        return f"OTP for {self.user.email}"
+
+    @staticmethod
+    def generate_code() -> str:
+        """Generate a random 6-digit numeric code."""
+
+        return f"{random.randint(0, 999999):06d}"
+
+    @classmethod
+    def create_for_user(cls, user: User, validity_minutes: int = 10) -> "EmailOTP":
+        """Create a new OTP for the user, invalidating any previous unused OTPs."""
+
+        cls.objects.filter(
+            user=user,
+            is_used=False,
+        ).update(is_used=True)
+
+        return cls.objects.create(
+            user=user,
+            code=cls.generate_code(),
+            expires_at=timezone.now() + timezone.timedelta(
+                minutes=validity_minutes
+            ),
+        )
+
+    def is_valid(self) -> bool:
+        """Check whether this OTP is still usable."""
+
+        return not self.is_used and timezone.now() <= self.expires_at
