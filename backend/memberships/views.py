@@ -324,7 +324,7 @@ class PortalAccessView(APIView):
                     "message": "Email verification required.",
                     "data": {
                         "can_access_portal": False,
-                        "next_step": "verify_email",
+                        "next_step": "verify_mobile",
                     },
                 },
                 status=status.HTTP_200_OK,

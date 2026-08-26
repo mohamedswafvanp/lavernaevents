@@ -268,10 +268,10 @@ class ResetPasswordSerializer(serializers.Serializer):
         return user
 
 
-class VerifyEmailSerializer(serializers.Serializer):
-    """Serializer for confirming a user's email using an OTP code."""
+class VerifyMobileSerializer(serializers.Serializer):
+    """Serializer for confirming a user's mobile number using an OTP code."""
 
-    email = serializers.EmailField(required=True)
+    mobile_number = serializers.CharField(required=True)
 
     code = serializers.CharField(
         required=True,
@@ -279,18 +279,18 @@ class VerifyEmailSerializer(serializers.Serializer):
         max_length=6,
     )
 
-    def validate_email(self, value: str) -> str:
-        """Normalize the email."""
+    def validate_mobile_number(self, value: str) -> str:
+        """Normalize the mobile number."""
 
-        return value.strip().lower()
+        return value.strip()
 
 
 class ResendOTPSerializer(serializers.Serializer):
-    """Serializer for requesting a new email verification OTP."""
+    """Serializer for requesting a new mobile verification OTP."""
 
-    email = serializers.EmailField(required=True)
+    mobile_number = serializers.CharField(required=True)
 
-    def validate_email(self, value: str) -> str:
-        """Normalize the email."""
+    def validate_mobile_number(self, value: str) -> str:
+        """Normalize the mobile number."""
 
-        return value.strip().lower()
+        return value.strip()

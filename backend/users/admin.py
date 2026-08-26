@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 
-from .models import EmailOTP, User
+from .models import MobileOTP, User
 
 
 @admin.register(User)
@@ -116,9 +116,9 @@ class CustomUserAdmin(UserAdmin):
     )
 
 
-@admin.register(EmailOTP)
-class EmailOTPAdmin(admin.ModelAdmin):
-    """Admin configuration for viewing email verification OTPs (for debugging)."""
+@admin.register(MobileOTP)
+class MobileOTPAdmin(admin.ModelAdmin):
+    """Admin configuration for viewing mobile verification OTPs (for debugging)."""
 
     list_display = (
         "user",
@@ -133,8 +133,8 @@ class EmailOTPAdmin(admin.ModelAdmin):
     )
 
     search_fields = (
-        "user__email",
         "user__mobile_number",
+        "user__email",
         "code",
     )
 

@@ -21,7 +21,7 @@ from .serializers import (
     UserLogoutSerializer,
     UserRegistrationSerializer,
     UserTokenRefreshSerializer,
-    VerifyEmailSerializer,
+    VerifyMobileSerializer,
 )
 from .services import send_verification_otp, verify_otp_code
 
@@ -57,7 +57,7 @@ class UserRegistrationView(APIView):
                 "success": True,
                 "message": (
                     "User registered successfully. "
-                    "A verification code has been sent to your email."
+                    "A verification code has been sent to your mobile number."
                 ),
                 "data": {
                     "id": user.id,
@@ -304,15 +304,15 @@ class ResetPasswordView(APIView):
         )
 
 
-class VerifyEmailView(APIView):
-    """Confirm a user's email address using a one-time code."""
+class VerifyMobileView(APIView):
+    """Confirm a user's mobile number using a one-time code."""
 
     permission_classes = [AllowAny]
 
     def post(self, request):
-        """Validate the OTP code and mark the user's email as verified."""
+        """Validate the OTP code and mark the user's mobile number as verified."""
 
-        serializer = VerifyEmailSerializer(data=request.data)
+        serializer = VerifyMobileSerializer(data=request.data)
 
         if not serializer.is_valid():
             return Response(
@@ -325,7 +325,7 @@ class VerifyEmailView(APIView):
             )
 
         success, message = verify_otp_code(
-            email=serializer.validated_data["email"],
+            mobile_number=serializer.validated_data["mobile_number"],
             code=serializer.validated_data["code"],
         )
 
@@ -350,7 +350,7 @@ class VerifyEmailView(APIView):
 
 
 class ResendOTPView(APIView):
-    """Resend a fresh email verification OTP."""
+    """Resend a fresh mobile verification OTP."""
 
     permission_classes = [AllowAny]
 
@@ -369,9 +369,9 @@ class ResendOTPView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        email = serializer.validated_data["email"]
+        mobile_number = serializer.validated_data["mobile_number"]
 
-        user = User.objects.filter(email__iexact=email).first()
+        user = User.objects.filter(mobile_number=mobile_number).first()
 
         if user is not None and not user.is_verified:
             send_verification_otp(user)
@@ -380,7 +380,7 @@ class ResendOTPView(APIView):
             {
                 "success": True,
                 "message": (
-                    "If an unverified account with that email exists, "
+                    "If an unverified account with that mobile number exists, "
                     "a new verification code has been sent."
                 ),
                 "data": {},
