@@ -8,13 +8,13 @@ from .views import (
     UserLogoutView,
     UserRegistrationView,
     UserTokenRefreshView,
-    VerifyEmailView,
+    VerifyMobileView,
 )
 
 
 urlpatterns = [
     path("register/", UserRegistrationView.as_view(), name="register"),
-    path("verify-email/", VerifyEmailView.as_view(), name="verify-email"),
+    path("verify-mobile/", VerifyMobileView.as_view(), name="verify-mobile"),
     path("resend-otp/", ResendOTPView.as_view(), name="resend-otp"),
     path("login/", UserLoginView.as_view(), name="login"),
     path("refresh/", UserTokenRefreshView.as_view(), name="token-refresh"),

@@ -86,13 +86,13 @@ class User(AbstractBaseUser, PermissionsMixin):
         return f"{self.full_name} ({self.mobile_number})"
 
 
-class EmailOTP(models.Model):
-    """A one-time password sent to a user's email for verification purposes."""
+class MobileOTP(models.Model):
+    """A one-time password sent to a user's mobile number for verification purposes."""
 
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
-        related_name="email_otps",
+        related_name="mobile_otps",
     )
 
     code = models.CharField(
@@ -110,11 +110,11 @@ class EmailOTP(models.Model):
     )
 
     class Meta:
-        db_table = "email_otps"
+        db_table = "mobile_otps"
         ordering = ["-created_at"]
 
     def __str__(self) -> str:
-        return f"OTP for {self.user.email}"
+        return f"OTP for {self.user.mobile_number}"
 
     @staticmethod
     def generate_code() -> str:
@@ -123,7 +123,7 @@ class EmailOTP(models.Model):
         return f"{random.randint(0, 999999):06d}"
 
     @classmethod
-    def create_for_user(cls, user: User, validity_minutes: int = 10) -> "EmailOTP":
+    def create_for_user(cls, user: User, validity_minutes: int = 10) -> "MobileOTP":
         """Create a new OTP for the user, invalidating any previous unused OTPs."""
 
         cls.objects.filter(
