@@ -2,4 +2,6 @@ from django.apps import AppConfig
 
 
 class GuestsConfig(AppConfig):
-    name = 'guests'
+    default_auto_field = "django.db.models.BigAutoField"
+    name = "guests"
+    verbose_name = "Guests"

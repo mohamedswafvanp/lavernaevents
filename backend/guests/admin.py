@@ -1,3 +1,38 @@
 from django.contrib import admin
 
-# Register your models here.
+from .models import Guest
+
+
+@admin.register(Guest)
+class GuestAdmin(admin.ModelAdmin):
+    """Admin configuration for guests."""
+
+    list_display = (
+        "name",
+        "mobile_number",
+        "event",
+        "family_member_count",
+        "invitation_status",
+        "response_status",
+        "created_at",
+    )
+
+    list_filter = (
+        "invitation_status",
+        "response_status",
+    )
+
+    search_fields = (
+        "name",
+        "mobile_number",
+        "event__name",
+    )
+
+    ordering = (
+        "-created_at",
+    )
+
+    readonly_fields = (
+        "created_at",
+        "updated_at",
+    )
