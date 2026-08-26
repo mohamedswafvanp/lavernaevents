@@ -47,6 +47,12 @@ class Guest(TimeStampedModel):
         default=ResponseStatus.PENDING,
     )
 
+    responded_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When the guest submitted their Accept/Reject/Maybe response.",
+    )
+
     notes = models.CharField(
         max_length=255,
         blank=True,
