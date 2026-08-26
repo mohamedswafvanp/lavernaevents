@@ -14,6 +14,7 @@ class GuestAdmin(admin.ModelAdmin):
         "family_member_count",
         "invitation_status",
         "response_status",
+        "responded_at",
         "created_at",
     )
 
@@ -33,6 +34,7 @@ class GuestAdmin(admin.ModelAdmin):
     )
 
     readonly_fields = (
+        "responded_at",
         "created_at",
         "updated_at",
     )

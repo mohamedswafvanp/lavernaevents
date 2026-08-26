@@ -15,6 +15,7 @@ class GuestSerializer(serializers.ModelSerializer):
             "family_member_count",
             "invitation_status",
             "response_status",
+            "responded_at",
             "notes",
             "created_at",
             "updated_at",
@@ -23,6 +24,7 @@ class GuestSerializer(serializers.ModelSerializer):
             "id",
             "invitation_status",
             "response_status",
+            "responded_at",
             "created_at",
             "updated_at",
         )
