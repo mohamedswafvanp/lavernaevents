@@ -39,9 +39,11 @@ class MembershipPlan(models.Model):
         help_text="Maximum number of active events allowed.",
     )
 
-    template_limit = models.PositiveIntegerField(
-        default=1,
-        help_text="Maximum number of invitation templates accessible.",
+    templates = models.ManyToManyField(
+        "invitations.InvitationTemplate",
+        related_name="plans",
+        blank=True,
+        help_text="The specific invitation templates organizers on this plan may use.",
     )
 
     storage_limit_mb = models.PositiveIntegerField(

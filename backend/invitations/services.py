@@ -3,7 +3,7 @@ import secrets
 
 from django.core.files.base import ContentFile
 from django.db import IntegrityError
-from memberships.utils import LimitExceededError, check_template_limit
+from memberships.utils import LimitExceededError, check_template_access
 from PIL import Image, ImageDraw, ImageFont
 
 from .models import Invitation, InvitationTemplate
@@ -16,23 +16,6 @@ class InvitationError(Exception):
         self.message = message
         self.code = code
         super().__init__(message)
-
-
-def get_organizer_template_usage_count(organizer) -> int:
-    """Return the number of distinct templates this organizer has already used.
-
-    Counts distinct templates across all of the organizer's events, since
-    the plan's template_limit restricts how many DIFFERENT templates an
-    organizer may use, not how many invitations are generated.
-    """
-
-    return (
-        InvitationTemplate.objects.filter(
-            invitations__event__organizer=organizer
-        )
-        .distinct()
-        .count()
-    )
 
 
 def generate_response_token() -> str:
@@ -91,7 +74,7 @@ def generate_invitation(event, guest, template_slug_or_id, organizer) -> Invitat
     """Generate a personalized invitation image for a guest using a template.
 
     Raises InvitationError if the template does not exist, is inactive,
-    the organizer's plan does not allow another distinct template, or an
+    the organizer's plan does not include this template, or an
     invitation for this guest+template already exists.
     """
 
@@ -106,19 +89,11 @@ def generate_invitation(event, guest, template_slug_or_id, organizer) -> Invitat
             code="template_not_found",
         )
 
-    already_used = InvitationTemplate.objects.filter(
-        pk=template.pk,
-        invitations__event__organizer=organizer,
-    ).exists()
+    try:
+        check_template_access(organizer, template)
 
-    if not already_used:
-        current_count = get_organizer_template_usage_count(organizer)
-
-        try:
-            check_template_limit(organizer, current_count)
-
-        except LimitExceededError as error:
-            raise InvitationError(error.message, code=error.code)
+    except LimitExceededError as error:
+        raise InvitationError(error.message, code=error.code)
 
     try:
         invitation = Invitation.objects.create(

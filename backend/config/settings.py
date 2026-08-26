@@ -65,6 +65,7 @@ INSTALLED_APPS = [
     "events",
     "guests",
     "invitations",
+    "whatsapp",
     "gallery",
     "photographers",
     "dashboard",

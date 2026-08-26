@@ -68,8 +68,12 @@ def check_event_limit(user, current_event_count: int) -> None:
         )
 
 
-def check_template_limit(user, current_template_count: int) -> None:
-    """Raise LimitExceededError if using one more template would exceed the plan."""
+def check_template_access(user, template) -> None:
+    """Raise LimitExceededError if the plan does not include this specific template.
+
+    Templates are assigned to plans individually by the admin (a
+    many-to-many relationship), not counted against a numeric limit.
+    """
 
     plan = get_effective_plan(user)
 
@@ -79,11 +83,11 @@ def check_template_limit(user, current_template_count: int) -> None:
             code="no_active_plan",
         )
 
-    if current_template_count >= plan.template_limit:
+    if not plan.templates.filter(pk=template.pk).exists():
         raise LimitExceededError(
-            f"Template limit reached. Your {plan.name} plan allows up to "
-            f"{plan.template_limit} templates.",
-            code="template_limit_exceeded",
+            f"This template is not available on your {plan.name} plan. "
+            "Please choose another template or upgrade your plan.",
+            code="template_not_in_plan",
         )
 
 
