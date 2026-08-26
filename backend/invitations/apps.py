@@ -2,4 +2,6 @@ from django.apps import AppConfig
 
 
 class InvitationsConfig(AppConfig):
-    name = 'invitations'
+    default_auto_field = "django.db.models.BigAutoField"
+    name = "invitations"
+    verbose_name = "Invitations"
