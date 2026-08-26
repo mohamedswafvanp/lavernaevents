@@ -1,5 +1,8 @@
 import { Menu, X } from "lucide-react"
-import { useState } from "react"
+import { useEffect, useState } from "react"
+import { useNavigate } from "react-router-dom"
+
+import { getAccessToken, logoutUser } from "@/lib/auth"
 
 const links = [
 	{ label: "Home", href: "/" },
@@ -12,7 +15,24 @@ const links = [
 ]
 
 function Navbar() {
+	const navigate = useNavigate()
 	const [isMenuOpen, setIsMenuOpen] = useState(false)
+	const [isAuthenticated, setIsAuthenticated] = useState(Boolean(getAccessToken()))
+
+	useEffect(() => {
+		const updateAuthState = () => setIsAuthenticated(Boolean(getAccessToken()))
+		window.addEventListener("laverna-auth-change", updateAuthState)
+		window.addEventListener("storage", updateAuthState)
+		return () => {
+			window.removeEventListener("laverna-auth-change", updateAuthState)
+			window.removeEventListener("storage", updateAuthState)
+		}
+	}, [])
+
+	const handleLogout = async () => {
+		await logoutUser().catch(() => undefined)
+		navigate("/login")
+	}
 
 	return (
 		<header className="sticky top-0 z-50 border-b border-slate-100 bg-white/95 backdrop-blur">
@@ -37,18 +57,7 @@ function Navbar() {
 							{link.label}
 						</a>
 					))}
-					<a
-						href="/login"
-						className="text-sm font-semibold text-[var(--brand-navy)] transition-colors hover:text-[var(--brand-pink)]"
-					>
-						Login
-					</a>
-					<a
-						href="/register"
-						className="rounded-md bg-[var(--brand-pink)] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[var(--brand-pink-dark)]"
-					>
-						Register
-					</a>
+					{isAuthenticated ? <><button type="button" onClick={() => void handleLogout()} className="text-sm font-semibold text-[var(--brand-navy)] transition-colors hover:text-[var(--brand-pink)]">Logout</button><a href="/demo-onboarding" className="rounded-md bg-[var(--brand-pink)] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[var(--brand-pink-dark)]">Register</a></> : <><a href="/login" className="text-sm font-semibold text-[var(--brand-navy)] transition-colors hover:text-[var(--brand-pink)]">Login</a><a href="/demo-onboarding" className="rounded-md bg-[var(--brand-pink)] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[var(--brand-pink-dark)]">Register</a></>}
 				</div>
 
 				<button
@@ -66,7 +75,7 @@ function Navbar() {
 			{isMenuOpen && (
 				<div id="mobile-navigation" className="border-t border-slate-100 bg-white px-5 pb-5 lg:hidden">
 					<div className="mx-auto flex max-w-7xl flex-col gap-1 pt-3">
-						{[...links, { label: "Login", href: "/login" }].map((link) => (
+						{[...links, ...(isAuthenticated ? [] : [{ label: "Login", href: "/login" }])].map((link) => (
 							<a
 								key={link.label}
 								href={link.href}
@@ -76,13 +85,7 @@ function Navbar() {
 								{link.label}
 							</a>
 						))}
-						<a
-							href="/register"
-							onClick={() => setIsMenuOpen(false)}
-							className="mt-2 rounded-md bg-[var(--brand-pink)] px-3 py-3 text-center text-sm font-semibold text-white hover:bg-[var(--brand-pink-dark)]"
-						>
-							Register
-						</a>
+						{isAuthenticated ? <><button type="button" onClick={() => { setIsMenuOpen(false); void handleLogout() }} className="mt-2 rounded-md px-3 py-3 text-left text-sm font-semibold text-[var(--brand-navy)] hover:bg-slate-50">Logout</button><a href="/demo-onboarding" onClick={() => setIsMenuOpen(false)} className="mt-2 rounded-md bg-[var(--brand-pink)] px-3 py-3 text-center text-sm font-semibold text-white hover:bg-[var(--brand-pink-dark)]">Register</a></> : <a href="/demo-onboarding" onClick={() => setIsMenuOpen(false)} className="mt-2 rounded-md bg-[var(--brand-pink)] px-3 py-3 text-center text-sm font-semibold text-white hover:bg-[var(--brand-pink-dark)]">Register</a>}
 					</div>
 				</div>
 			)}

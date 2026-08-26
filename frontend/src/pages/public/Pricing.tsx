@@ -4,13 +4,42 @@ import { Link, useNavigate } from "react-router-dom"
 
 import {
 	changePlan,
+	createPaymentOrder,
 	getAccessToken,
 	getApiErrorMessage,
 	getMembershipPlans,
 	getMySubscription,
+	getPortalAccess,
 	subscribeToPlan,
+	verifyPayment,
 	type MembershipPlan,
 } from "@/lib/auth"
+
+declare global {
+	interface Window {
+		Razorpay?: new (options: {
+			key: string
+			amount: number
+			currency: string
+			name: string
+			description: string
+			order_id: string
+			handler: (response: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) => void
+			modal: { ondismiss: () => void }
+		}) => { open: () => void }
+	}
+}
+
+async function loadRazorpay() {
+	if (window.Razorpay) return
+	await new Promise<void>((resolve, reject) => {
+		const script = document.createElement("script")
+		script.src = "https://checkout.razorpay.com/v1/checkout.js"
+		script.onload = () => resolve()
+		script.onerror = () => reject(new Error("Unable to load secure payment checkout."))
+		document.body.appendChild(script)
+	})
+}
 
 function planFeatures(plan: MembershipPlan) {
 	return [
@@ -61,12 +90,38 @@ function Pricing() {
 		try {
 			if (activeSlug) {
 				const response = await changePlan(plan.slug)
-				setNotice(`Plan ${response.data.change_type} completed successfully.`)
 				setActiveSlug(response.data.subscription.plan.slug)
-			} else {
+				setNotice(`Plan ${response.data.change_type} completed successfully.`)
+				navigate("/account")
+			} else if (Number(plan.price) === 0) {
 				const response = await subscribeToPlan(plan.slug)
-				setNotice(response.message ?? "Subscribed successfully.")
 				setActiveSlug(response.data.plan.slug)
+				setNotice(response.message ?? "Subscribed successfully.")
+				const access = await getPortalAccess()
+				if (access.data.next_step === null) navigate("/portal")
+				else navigate("/account")
+			} else {
+				const order = await createPaymentOrder(plan.slug)
+				await loadRazorpay()
+				if (!window.Razorpay) throw new Error("Secure payment checkout is unavailable.")
+				const checkout = new window.Razorpay({
+					key: order.data.razorpay_key_id,
+					amount: Math.round(Number(order.data.amount) * 100),
+					currency: order.data.currency,
+					name: "LavernaEvents",
+					description: `${plan.name} membership`,
+					order_id: order.data.razorpay_order_id,
+					handler: (payment) => {
+						void verifyPayment(payment).then(async () => {
+							const access = await getPortalAccess()
+							if (access.data.next_step === null) navigate("/portal")
+							else navigate("/account")
+						}).catch((paymentError) => setError(getApiErrorMessage(paymentError)))
+					},
+					modal: { ondismiss: () => setSelectedSlug("") },
+				})
+				checkout.open()
+				return
 			}
 		} catch (actionError) {
 			setError(getApiErrorMessage(actionError))

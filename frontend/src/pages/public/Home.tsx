@@ -47,7 +47,7 @@ function Home() {
 					</p>
 					<div className="mt-8 flex flex-wrap items-center gap-4">
 						<a
-							href="#register"
+							href="/demo-onboarding"
 							className="rounded-md bg-[var(--brand-pink)] px-6 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[var(--brand-pink-dark)]"
 						>
 							Get Started
