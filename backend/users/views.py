@@ -15,12 +15,15 @@ from decouple import config
 from .models import User
 from .serializers import (
     ForgotPasswordSerializer,
+    ResendOTPSerializer,
     ResetPasswordSerializer,
     UserLoginSerializer,
     UserLogoutSerializer,
     UserRegistrationSerializer,
     UserTokenRefreshSerializer,
+    VerifyEmailSerializer,
 )
+from .services import send_verification_otp, verify_otp_code
 
 
 class UserRegistrationView(APIView):
@@ -47,10 +50,15 @@ class UserRegistrationView(APIView):
 
         user = serializer.save()
 
+        send_verification_otp(user)
+
         return Response(
             {
                 "success": True,
-                "message": "User registered successfully.",
+                "message": (
+                    "User registered successfully. "
+                    "A verification code has been sent to your email."
+                ),
                 "data": {
                     "id": user.id,
                     "full_name": user.full_name,
@@ -290,6 +298,91 @@ class ResetPasswordView(APIView):
             {
                 "success": True,
                 "message": "Password reset successfully. You can now log in.",
+                "data": {},
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+class VerifyEmailView(APIView):
+    """Confirm a user's email address using a one-time code."""
+
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        """Validate the OTP code and mark the user's email as verified."""
+
+        serializer = VerifyEmailSerializer(data=request.data)
+
+        if not serializer.is_valid():
+            return Response(
+                {
+                    "success": False,
+                    "message": "Invalid request.",
+                    "errors": serializer.errors,
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        success, message = verify_otp_code(
+            email=serializer.validated_data["email"],
+            code=serializer.validated_data["code"],
+        )
+
+        if not success:
+            return Response(
+                {
+                    "success": False,
+                    "message": message,
+                    "errors": {"code": [message]},
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        return Response(
+            {
+                "success": True,
+                "message": message,
+                "data": {},
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+class ResendOTPView(APIView):
+    """Resend a fresh email verification OTP."""
+
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        """Generate and send a new OTP if the account exists and is unverified."""
+
+        serializer = ResendOTPSerializer(data=request.data)
+
+        if not serializer.is_valid():
+            return Response(
+                {
+                    "success": False,
+                    "message": "Invalid request.",
+                    "errors": serializer.errors,
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        email = serializer.validated_data["email"]
+
+        user = User.objects.filter(email__iexact=email).first()
+
+        if user is not None and not user.is_verified:
+            send_verification_otp(user)
+
+        return Response(
+            {
+                "success": True,
+                "message": (
+                    "If an unverified account with that email exists, "
+                    "a new verification code has been sent."
+                ),
                 "data": {},
             },
             status=status.HTTP_200_OK,

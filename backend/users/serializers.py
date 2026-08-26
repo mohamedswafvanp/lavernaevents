@@ -266,3 +266,31 @@ class ResetPasswordSerializer(serializers.Serializer):
         user.save(update_fields=["password"])
 
         return user
+
+
+class VerifyEmailSerializer(serializers.Serializer):
+    """Serializer for confirming a user's email using an OTP code."""
+
+    email = serializers.EmailField(required=True)
+
+    code = serializers.CharField(
+        required=True,
+        min_length=6,
+        max_length=6,
+    )
+
+    def validate_email(self, value: str) -> str:
+        """Normalize the email."""
+
+        return value.strip().lower()
+
+
+class ResendOTPSerializer(serializers.Serializer):
+    """Serializer for requesting a new email verification OTP."""
+
+    email = serializers.EmailField(required=True)
+
+    def validate_email(self, value: str) -> str:
+        """Normalize the email."""
+
+        return value.strip().lower()

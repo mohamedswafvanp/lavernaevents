@@ -130,6 +130,7 @@ class SubscribeView(APIView):
     ERROR_STATUS_MAP = {
         "plan_not_found": status.HTTP_404_NOT_FOUND,
         "already_subscribed": status.HTTP_409_CONFLICT,
+        "payment_required": status.HTTP_402_PAYMENT_REQUIRED,
     }
 
     def post(self, request):
@@ -191,6 +192,7 @@ class ChangePlanView(APIView):
         "plan_not_found": status.HTTP_404_NOT_FOUND,
         "no_active_subscription": status.HTTP_409_CONFLICT,
         "same_plan": status.HTTP_409_CONFLICT,
+        "payment_required": status.HTTP_402_PAYMENT_REQUIRED,
     }
 
     def post(self, request):
@@ -294,6 +296,63 @@ class MyUsageView(APIView):
                 "success": True,
                 "message": "Usage summary retrieved successfully.",
                 "data": serializer.data,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+class PortalAccessView(APIView):
+    """Check whether the authenticated user may enter the organizer portal.
+
+    Requires both: verified email AND an active (paid or free) subscription.
+    Intended to be called by the frontend right after login/payment to
+    decide whether to route the user into the dashboard or back to an
+    onboarding step (verify email / choose a plan / pay).
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        """Return whether the user can access the portal, and which step is blocking them."""
+
+        user = request.user
+
+        if not user.is_verified:
+            return Response(
+                {
+                    "success": True,
+                    "message": "Email verification required.",
+                    "data": {
+                        "can_access_portal": False,
+                        "next_step": "verify_email",
+                    },
+                },
+                status=status.HTTP_200_OK,
+            )
+
+        subscription = get_active_subscription(user)
+
+        if subscription is None:
+            return Response(
+                {
+                    "success": True,
+                    "message": "An active membership plan is required.",
+                    "data": {
+                        "can_access_portal": False,
+                        "next_step": "select_plan",
+                    },
+                },
+                status=status.HTTP_200_OK,
+            )
+
+        return Response(
+            {
+                "success": True,
+                "message": "Portal access granted.",
+                "data": {
+                    "can_access_portal": True,
+                    "next_step": None,
+                },
             },
             status=status.HTTP_200_OK,
         )

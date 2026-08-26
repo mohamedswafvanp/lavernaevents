@@ -26,8 +26,12 @@ def get_active_subscription(user) -> Subscription | None:
     )
 
 
-def _create_active_subscription(user, plan: MembershipPlan) -> Subscription:
-    """Create and return a new active subscription for the given plan."""
+def create_active_subscription(user, plan: MembershipPlan) -> Subscription:
+    """Create and return a new active subscription for the given plan.
+
+    Public so other apps (e.g. payments, after verifying a Razorpay
+    payment) can activate a subscription once payment is confirmed.
+    """
 
     expires_at = timezone.now() + timezone.timedelta(
         days=plan.duration_days
@@ -42,10 +46,11 @@ def _create_active_subscription(user, plan: MembershipPlan) -> Subscription:
 
 
 def subscribe_user_to_plan(user, plan_slug: str) -> Subscription:
-    """Create a new active subscription for a user on the given plan.
+    """Create a new active subscription for a user on a FREE plan (price = 0) only.
 
+    Paid plans must go through the payments app's checkout flow instead.
     Raises SubscriptionError if the plan does not exist, is inactive,
-    or the user already has an active subscription.
+    requires payment, or the user already has an active subscription.
     """
 
     plan = MembershipPlan.objects.filter(
@@ -59,6 +64,12 @@ def subscribe_user_to_plan(user, plan_slug: str) -> Subscription:
             code="plan_not_found",
         )
 
+    if plan.price > 0:
+        raise SubscriptionError(
+            "This plan requires payment. Please use the checkout flow.",
+            code="payment_required",
+        )
+
     existing = get_active_subscription(user)
 
     if existing is not None:
@@ -68,17 +79,20 @@ def subscribe_user_to_plan(user, plan_slug: str) -> Subscription:
             code="already_subscribed",
         )
 
-    return _create_active_subscription(user, plan)
+    return create_active_subscription(user, plan)
 
 
 def change_user_plan(user, new_plan_slug: str) -> tuple[Subscription, str]:
     """Cancel the user's current active subscription and start a new one.
 
+    Only valid for switching to a FREE plan directly. Switching to a paid
+    plan must go through the payments app's checkout flow instead.
+
     Returns a tuple of (new_subscription, change_type) where change_type
     is one of "upgrade", "downgrade", or "same" based on price comparison.
 
     Raises SubscriptionError if there is no active subscription to change,
-    the target plan does not exist, or the target plan is the same as
+    the target plan does not exist, requires payment, or is the same as
     the current one.
     """
 
@@ -108,12 +122,17 @@ def change_user_plan(user, new_plan_slug: str) -> tuple[Subscription, str]:
             code="same_plan",
         )
 
-    if new_plan.price > current_subscription.plan.price:
-        change_type = "upgrade"
-    elif new_plan.price < current_subscription.plan.price:
-        change_type = "downgrade"
-    else:
-        change_type = "same"
+    if new_plan.price > 0:
+        raise SubscriptionError(
+            "This plan requires payment. Please use the checkout flow.",
+            code="payment_required",
+        )
+
+    change_type = (
+        "downgrade"
+        if new_plan.price < current_subscription.plan.price
+        else "same"
+    )
 
     with transaction.atomic():
         current_subscription.status = Subscription.Status.CANCELLED
@@ -122,6 +141,6 @@ def change_user_plan(user, new_plan_slug: str) -> tuple[Subscription, str]:
             update_fields=["status", "cancelled_at", "updated_at"]
         )
 
-        new_subscription = _create_active_subscription(user, new_plan)
+        new_subscription = create_active_subscription(user, new_plan)
 
     return new_subscription, change_type
