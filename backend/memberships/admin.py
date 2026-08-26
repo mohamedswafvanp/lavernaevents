@@ -13,7 +13,7 @@ class MembershipPlanAdmin(admin.ModelAdmin):
         "duration_days",
         "guest_limit",
         "event_limit",
-        "template_limit",
+        "template_count",
         "storage_limit_mb",
         "is_active",
         "display_order",
@@ -34,6 +34,10 @@ class MembershipPlanAdmin(admin.ModelAdmin):
     prepopulated_fields = {
         "slug": ("name",),
     }
+
+    filter_horizontal = (
+        "templates",
+    )
 
     ordering = (
         "display_order",
@@ -66,9 +70,20 @@ class MembershipPlanAdmin(admin.ModelAdmin):
                 "fields": (
                     "guest_limit",
                     "event_limit",
-                    "template_limit",
                     "storage_limit_mb",
                 )
+            },
+        ),
+        (
+            "Invitation Templates",
+            {
+                "fields": (
+                    "templates",
+                ),
+                "description": (
+                    "Select which invitation templates organizers on "
+                    "this plan are allowed to use."
+                ),
             },
         ),
         (
@@ -91,6 +106,12 @@ class MembershipPlanAdmin(admin.ModelAdmin):
             },
         ),
     )
+
+    @admin.display(description="Templates")
+    def template_count(self, obj: MembershipPlan) -> int:
+        """Show how many templates are assigned to this plan in the list view."""
+
+        return obj.templates.count()
 
 
 @admin.register(Subscription)

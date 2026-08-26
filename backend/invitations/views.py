@@ -1,6 +1,7 @@
 from common.permissions import IsOrganizer
 from events.models import Event
 from guests.models import Guest
+from memberships.utils import get_effective_plan
 from rest_framework import status
 from rest_framework.generics import ListAPIView
 from rest_framework.permissions import IsAuthenticated
@@ -17,7 +18,7 @@ from .services import InvitationError, generate_invitation
 
 INVITATION_ERROR_STATUS_MAP = {
     "template_not_found": status.HTTP_404_NOT_FOUND,
-    "template_limit_exceeded": status.HTTP_409_CONFLICT,
+    "template_not_in_plan": status.HTTP_403_FORBIDDEN,
     "no_active_plan": status.HTTP_402_PAYMENT_REQUIRED,
     "duplicate_invitation": status.HTTP_409_CONFLICT,
     "render_failed": status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -25,11 +26,11 @@ INVITATION_ERROR_STATUS_MAP = {
 
 
 class InvitationTemplateListView(ListAPIView):
-    """List all active invitation templates available to browse.
+    """List invitation templates available to the requesting organizer's plan.
 
-    All active templates are shown to every organizer; the plan's
-    template_limit is enforced at GENERATION time (how many distinct
-    templates they may actually USE), not at browse time.
+    Only templates assigned to the organizer's current active plan are
+    shown, since access is now admin-curated per plan (not a numeric
+    limit). Organizers with no active plan see an empty list.
     """
 
     serializer_class = InvitationTemplateSerializer
@@ -37,9 +38,14 @@ class InvitationTemplateListView(ListAPIView):
     pagination_class = None
 
     def get_queryset(self):
-        """Return active templates ordered for display."""
+        """Return active templates assigned to the organizer's current plan."""
 
-        return InvitationTemplate.objects.filter(
+        plan = get_effective_plan(self.request.user)
+
+        if plan is None:
+            return InvitationTemplate.objects.none()
+
+        return plan.templates.filter(
             is_active=True
         ).order_by("display_order", "name")
 

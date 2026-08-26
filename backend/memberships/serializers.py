@@ -6,6 +6,8 @@ from .models import MembershipPlan, Subscription
 class MembershipPlanSerializer(serializers.ModelSerializer):
     """Serializer for listing and viewing membership plans (public, read-only)."""
 
+    template_names = serializers.SerializerMethodField()
+
     class Meta:
         model = MembershipPlan
         fields = (
@@ -17,7 +19,7 @@ class MembershipPlanSerializer(serializers.ModelSerializer):
             "duration_days",
             "guest_limit",
             "event_limit",
-            "template_limit",
+            "template_names",
             "storage_limit_mb",
             "gallery_enabled",
             "qr_code_enabled",
@@ -25,6 +27,13 @@ class MembershipPlanSerializer(serializers.ModelSerializer):
             "display_order",
         )
         read_only_fields = fields
+
+    def get_template_names(self, obj: MembershipPlan) -> list:
+        """Return the names of templates included with this plan, for the pricing page."""
+
+        return list(
+            obj.templates.filter(is_active=True).values_list("name", flat=True)
+        )
 
 
 class SubscriptionSerializer(serializers.ModelSerializer):
@@ -70,7 +79,7 @@ class MyUsageSerializer(serializers.Serializer):
 
     guest_limit = serializers.IntegerField(allow_null=True)
     event_limit = serializers.IntegerField(allow_null=True)
-    template_limit = serializers.IntegerField(allow_null=True)
+    template_count = serializers.IntegerField(allow_null=True)
     storage_limit_mb = serializers.IntegerField(allow_null=True)
 
     gallery_enabled = serializers.BooleanField()
