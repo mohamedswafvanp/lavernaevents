@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Link } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
@@ -22,8 +22,8 @@ const registerSchema = z
 type RegisterFormData = z.infer<typeof registerSchema>
 
 function Register() {
+	const navigate = useNavigate()
 	const [serverError, setServerError] = useState("")
-	const [isRegistered, setIsRegistered] = useState(false)
 	const {
 		register,
 		handleSubmit,
@@ -34,7 +34,7 @@ function Register() {
 		setServerError("")
 		try {
 			await registerUser(data)
-			setIsRegistered(true)
+			navigate("/verify-email", { state: { email: data.email } })
 		} catch (error) {
 			setServerError(getApiErrorMessage(error))
 		}
@@ -78,7 +78,6 @@ function Register() {
 						</div>
 					</div>
 					{serverError && <p className="text-sm text-red-600" role="alert">{serverError}</p>}
-					{isRegistered && <p className="text-sm font-medium text-emerald-700" role="status">Account created successfully. You can now log in.</p>}
 					<button type="submit" disabled={isSubmitting} className="w-full rounded-md bg-[var(--brand-pink)] px-6 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[var(--brand-pink-dark)] disabled:cursor-not-allowed disabled:opacity-60">{isSubmitting ? "Creating account..." : "Create Account"}</button>
 				</form>
 

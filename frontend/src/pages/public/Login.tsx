@@ -1,10 +1,10 @@
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Link } from "react-router-dom"
+import { Link, useLocation, useNavigate } from "react-router-dom"
 import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 
-import { getApiErrorMessage, loginUser } from "@/lib/auth"
+import { getApiErrorMessage, getPortalAccess, loginUser } from "@/lib/auth"
 
 const loginSchema = z.object({
 	mobile_number: z.string().regex(/^\d{10,15}$/, "Enter a valid 10-15 digit mobile number."),
@@ -14,8 +14,11 @@ const loginSchema = z.object({
 type LoginFormData = z.infer<typeof loginSchema>
 
 function Login() {
+	const navigate = useNavigate()
+	const location = useLocation()
+	const destination = (location.state as { from?: string } | null)?.from ?? "/pricing"
 	const [serverError, setServerError] = useState("")
-	const [isLoggedIn, setIsLoggedIn] = useState(false)
+	const [successMessage, setSuccessMessage] = useState("")
 	const {
 		register,
 		handleSubmit,
@@ -25,8 +28,14 @@ function Login() {
 	const onSubmit = async (data: LoginFormData) => {
 		setServerError("")
 		try {
-			await loginUser(data)
-			setIsLoggedIn(true)
+			const loginResponse = await loginUser(data)
+			setSuccessMessage("Login successful")
+			const access = await getPortalAccess()
+			setTimeout(() => {
+				if (access.data.next_step === "verify_email") navigate("/verify-email", { replace: true, state: { email: loginResponse.data.user?.email } })
+				else if (access.data.next_step === "select_plan") navigate("/pricing", { replace: true })
+				else navigate(destination === "/login" ? "/portal" : destination, { replace: true })
+			}, 700)
 		} catch (error) {
 			setServerError(getApiErrorMessage(error))
 		}
@@ -53,11 +62,12 @@ function Login() {
 						{errors.password && <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>}
 					</div>
 					{serverError && <p className="text-sm text-red-600" role="alert">{serverError}</p>}
-					{isLoggedIn && <p className="text-sm font-medium text-emerald-700" role="status">Login successful.</p>}
+					{successMessage && <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--brand-navy)]/30 p-5" role="status"><div className="rounded-lg bg-white p-7 text-center shadow-xl"><p className="text-lg font-semibold text-emerald-700">{successMessage}</p><p className="mt-2 text-sm text-slate-600">Taking you to the next step...</p></div></div>}
+					<div className="text-right"><Link to="/forgot-password" className="text-sm font-semibold text-[var(--brand-pink)] hover:underline">Forgot password?</Link></div>
 					<button type="submit" disabled={isSubmitting} className="w-full rounded-md bg-[var(--brand-pink)] px-6 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[var(--brand-pink-dark)] disabled:cursor-not-allowed disabled:opacity-60">{isSubmitting ? "Logging in..." : "Log In"}</button>
 				</form>
 
-				<p className="mt-7 text-center text-sm text-slate-600">Don&apos;t have an account? <Link to="/register" className="font-semibold text-[var(--brand-pink)] hover:underline">Create one</Link></p>
+				<p className="mt-7 text-center text-sm text-slate-600">Don&apos;t have an account? <Link to="/demo-onboarding" className="font-semibold text-[var(--brand-pink)] hover:underline">Create one</Link></p>
 			</div>
 		</section>
 	)

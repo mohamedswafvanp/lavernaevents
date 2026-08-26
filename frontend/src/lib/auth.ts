@@ -14,14 +14,19 @@ export function getApiErrorMessage(error: unknown) {
 
 async function request<T>(path: string, options: RequestInit = {}) {
 	const accessToken = localStorage.getItem("laverna_access_token")
-	const response = await fetch(`${API_BASE_URL}${path}`, {
-		...options,
-		headers: {
-			"Content-Type": "application/json",
-			...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-			...options.headers,
-		},
-	})
+	let response: Response
+	try {
+		response = await fetch(`${API_BASE_URL}${path}`, {
+			...options,
+			headers: {
+				"Content-Type": "application/json",
+				...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+				...options.headers,
+			},
+		})
+	} catch {
+		throw new Error("Unable to connect to the server. Start Django at http://127.0.0.1:8000 and try again.")
+	}
 
 	const result = (await response.json().catch(() => ({}))) as ApiResponse
 	if (!response.ok) {
@@ -37,12 +42,13 @@ async function request<T>(path: string, options: RequestInit = {}) {
 }
 
 export async function loginUser(body: { mobile_number: string; password: string }) {
-	const result = await request<{ access?: string; refresh?: string }>("/auth/login/", {
+	const result = await request<{ access?: string; refresh?: string; user?: { email?: string } }>("/auth/login/", {
 		method: "POST",
 		body: JSON.stringify(body),
 	})
 	if (result.data?.access) localStorage.setItem("laverna_access_token", result.data.access)
 	if (result.data?.refresh) localStorage.setItem("laverna_refresh_token", result.data.refresh)
+	window.dispatchEvent(new Event("laverna-auth-change"))
 	return result
 }
 
@@ -54,6 +60,17 @@ export function registerUser(body: {
 	password_confirm: string
 }) {
 	return request("/auth/register/", { method: "POST", body: JSON.stringify(body) })
+}
+
+export async function logoutUser() {
+	const refresh = localStorage.getItem("laverna_refresh_token")
+	try {
+		if (refresh) await request("/auth/logout/", { method: "POST", body: JSON.stringify({ refresh }) })
+	} finally {
+		localStorage.removeItem("laverna_access_token")
+		localStorage.removeItem("laverna_refresh_token")
+		window.dispatchEvent(new Event("laverna-auth-change"))
+	}
 }
 
 export function getAccessToken() {
@@ -121,4 +138,31 @@ export type UsageSummary = {
 	gallery_enabled: boolean
 	qr_code_enabled: boolean
 	photographer_access_enabled: boolean
+}
+
+export function verifyEmail(body: { email: string; code: string }) {
+	return request("/auth/verify-email/", { method: "POST", body: JSON.stringify(body) })
+}
+
+export function resendOtp(email: string) {
+	return request("/auth/resend-otp/", { method: "POST", body: JSON.stringify({ email }) })
+}
+
+export function requestPasswordReset(email: string) {
+	return request("/auth/forgot-password/", { method: "POST", body: JSON.stringify({ email }) })
+}
+
+export function getPortalAccess() {
+	return request<{ can_access_portal: boolean; next_step: "verify_email" | "select_plan" | null }>("/memberships/portal-access/", { method: "GET" })
+}
+
+export function createPaymentOrder(planSlug: string) {
+	return request<{ razorpay_order_id: string; razorpay_key_id: string; amount: string; currency: string; plan_slug: string }>("/payments/create-order/", {
+		method: "POST",
+		body: JSON.stringify({ plan_slug: planSlug }),
+	})
+}
+
+export function verifyPayment(body: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) {
+	return request("/payments/verify/", { method: "POST", body: JSON.stringify(body) })
 }
