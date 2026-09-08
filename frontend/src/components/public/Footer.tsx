@@ -1,81 +1,84 @@
 import { Globe, Play, Share2 } from "lucide-react"
+import { Link } from "react-router-dom"
 
 const quickLinks = [
-	{ label: "About", href: "#about" },
-	{ label: "Features", href: "#features" },
-	{ label: "Pricing", href: "#pricing" },
-	{ label: "Contact", href: "#contact" },
+	{ label: "Home", href: "/" },
+	{ label: "About", href: "/about" },
+	{ label: "Pricing", href: "/pricing" },
+	{ label: "Gallery", href: "/gallery" },
+	{ label: "FAQ", href: "/faq" },
+	{ label: "Contact", href: "/contact" },
 ]
 
 function Footer() {
 	return (
-		<footer className="bg-[var(--brand-navy)] text-white">
-			<div className="mx-auto grid max-w-7xl gap-10 px-5 py-14 sm:px-8 md:grid-cols-3 lg:px-10">
+		<footer className="border-t border-slate-200/80 bg-[var(--brand-navy)] text-white">
+			<div className="mx-auto grid max-w-7xl gap-8 px-5 py-12 sm:px-6 md:grid-cols-3 lg:px-8">
 				<div>
-					<a
-						href="#home"
-						className="text-xl font-bold tracking-[0.16em] text-white"
+					<Link
+						to="/"
+						className="text-lg font-bold tracking-[0.16em] text-white"
 					>
 						LAVERNA <span className="text-[var(--brand-pink)]">EVENTS</span>
-					</a>
-					<p className="mt-4 max-w-xs text-sm leading-6 text-white/70">
-						Celebrate. Connect. Cherish.
+					</Link>
+					<p className="mt-3 max-w-xs text-xs leading-6 text-white/70">
+						Celebrate. Connect. Cherish. Intelligent event coordination, WhatsApp passes, and AI memory galleries.
 					</p>
 				</div>
 
 				<div>
-					<h2 className="text-sm font-semibold uppercase tracking-[0.16em] text-white">
+					<h2 className="text-xs font-bold uppercase tracking-[0.16em] text-orange-200">
 						Quick Links
 					</h2>
-					<nav aria-label="Footer navigation" className="mt-4 flex flex-col items-start gap-3">
+					<nav
+						aria-label="Footer navigation"
+						className="mt-3 grid grid-cols-2 gap-2"
+					>
 						{quickLinks.map((link) => (
-							<a
+							<Link
 								key={link.label}
-								href={link.href}
-								className="text-sm text-white/70 transition-colors hover:text-white"
+								to={link.href}
+								className="text-xs text-white/75 transition-colors hover:text-[var(--brand-pink)]"
 							>
 								{link.label}
-							</a>
+							</Link>
 						))}
 					</nav>
 				</div>
 
 				<div>
-					<h2 className="text-sm font-semibold uppercase tracking-[0.16em] text-white">
-						Follow Us
+					<h2 className="text-xs font-bold uppercase tracking-[0.16em] text-orange-200">
+						Follow & Connect
 					</h2>
-					<div className="mt-4 flex items-center gap-3">
+					<div className="mt-3 flex items-center gap-2.5">
 						<a
 							href="#instagram"
 							aria-label="Instagram"
-							title="Instagram"
-							className="rounded-md border border-white/20 p-2.5 text-white/75 transition-colors hover:border-[var(--brand-pink)] hover:text-[var(--brand-pink)]"
+							className="flex size-9 items-center justify-center rounded-full border border-white/20 text-white/75 transition-colors hover:border-[var(--brand-pink)] hover:bg-[var(--brand-pink)] hover:text-white"
 						>
-							<Globe aria-hidden="true" size={19} />
+							<Globe aria-hidden="true" size={16} />
 						</a>
 						<a
 							href="#linkedin"
 							aria-label="LinkedIn"
-							title="LinkedIn"
-							className="rounded-md border border-white/20 p-2.5 text-white/75 transition-colors hover:border-[var(--brand-pink)] hover:text-[var(--brand-pink)]"
+							className="flex size-9 items-center justify-center rounded-full border border-white/20 text-white/75 transition-colors hover:border-[var(--brand-pink)] hover:bg-[var(--brand-pink)] hover:text-white"
 						>
-							<Share2 aria-hidden="true" size={19} />
+							<Share2 aria-hidden="true" size={16} />
 						</a>
 						<a
 							href="#youtube"
 							aria-label="YouTube"
-							title="YouTube"
-							className="rounded-md border border-white/20 p-2.5 text-white/75 transition-colors hover:border-[var(--brand-pink)] hover:text-[var(--brand-pink)]"
+							className="flex size-9 items-center justify-center rounded-full border border-white/20 text-white/75 transition-colors hover:border-[var(--brand-pink)] hover:bg-[var(--brand-pink)] hover:text-white"
 						>
-							<Play aria-hidden="true" size={19} />
+							<Play aria-hidden="true" size={16} />
 						</a>
 					</div>
 				</div>
 			</div>
 
 			<div className="border-t border-white/10">
-				<p className="mx-auto max-w-7xl px-5 py-5 text-center text-xs text-white/55 sm:px-8 lg:px-10">
-					© {new Date().getFullYear()} LavernaEvents. All rights reserved.
+				<p className="mx-auto max-w-7xl px-5 py-4 text-center text-[11px] text-white/50 sm:px-6 lg:px-8">
+					© {new Date().getFullYear()} Laverna Events. All rights reserved.
 				</p>
 			</div>
 		</footer>

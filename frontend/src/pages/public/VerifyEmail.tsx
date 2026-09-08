@@ -1,5 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { CheckCircle2 } from "lucide-react"
+
 import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { useLocation, useNavigate } from "react-router-dom"
@@ -7,7 +8,8 @@ import { z } from "zod"
 
 import { getApiErrorMessage, resendOtp, verifyEmail } from "@/lib/auth"
 
-const schema = z.object({ code: z.string().regex(/^\d{6}$/, "Enter the 6-digit code.") })
+const schema = z
+	.object({ code: z.string().regex(/^\d{6}$/, "Enter the 6-digit code.") })
 type FormData = z.infer<typeof schema>
 
 function VerifyEmail() {
@@ -16,11 +18,16 @@ function VerifyEmail() {
 	const email = (location.state as { email?: string } | null)?.email ?? ""
 	const [message, setMessage] = useState("")
 	const [error, setError] = useState("")
-	const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormData>({ resolver: zodResolver(schema) })
+	const {
+		register,
+		handleSubmit,
+		formState: { errors, isSubmitting },
+	} = useForm<FormData>({ resolver: zodResolver(schema) })
 
 	const onSubmit = async ({ code }: FormData) => {
 		setError("")
-		if (!email) return setError("Your email is missing. Please register again.")
+		if (!email)
+			return setError("Your email is missing. Please register again.")
 		try {
 			await verifyEmail({ email, code })
 			setMessage("Email verified. Please log in to continue.")
@@ -41,11 +48,75 @@ function VerifyEmail() {
 	}
 
 	return (
-		<section className="bg-white">
-			<div className="mx-auto max-w-md px-5 py-20 sm:py-28">
-				<div className="text-center"><p className="text-sm font-semibold uppercase tracking-[0.2em] text-[var(--brand-pink)]">Verify your email</p><h1 className="mt-4 text-4xl font-bold tracking-tight text-[var(--brand-navy)]">Enter the code we emailed you</h1><p className="mt-4 text-sm leading-7 text-slate-600">{email ? `We sent a 6-digit code to ${email}.` : "Open this page from registration to verify your email."}</p></div>
-				<form onSubmit={handleSubmit(onSubmit)} className="mt-10 space-y-5" noValidate><input aria-label="Verification code" autoComplete="one-time-code" inputMode="numeric" maxLength={6} {...register("code")} className="w-full rounded-md border border-slate-300 px-4 py-4 text-center text-2xl tracking-[0.45em] outline-none focus:border-[var(--brand-pink)] focus:ring-2 focus:ring-[var(--brand-pink)]/20" placeholder="000000" />{errors.code && <p className="text-center text-sm text-red-600">{errors.code.message}</p>}{error && <p className="text-center text-sm text-red-600" role="alert">{error}</p>}{message && <p className="flex items-center justify-center gap-2 text-center text-sm font-medium text-emerald-700" role="status"><CheckCircle2 size={17} />{message}</p>}<button type="submit" disabled={isSubmitting} className="w-full rounded-md bg-[var(--brand-pink)] px-6 py-3 text-sm font-semibold text-white hover:bg-[var(--brand-pink-dark)] disabled:opacity-60">{isSubmitting ? "Verifying..." : "Verify email"}</button></form>
-				<button type="button" onClick={() => void handleResend()} disabled={!email} className="mx-auto mt-6 block text-sm font-semibold text-[var(--brand-pink)] hover:underline disabled:text-slate-400">Resend code</button>
+		<section className="min-h-screen bg-slate-50/70 pb-16">
+			<div className="mx-auto max-w-md px-4 pt-8 sm:px-6 sm:pt-14">
+				<div className="rounded-[2.5rem] border border-slate-200/80 bg-white p-7 soft-shadow-lg sm:p-9 text-center">
+					<span className="rounded-full bg-pink-50 px-3.5 py-1 text-xs font-bold uppercase tracking-wider text-[var(--brand-pink)]">
+						Email Verification
+					</span>
+					<h1 className="mt-4 text-2xl font-bold tracking-tight text-[var(--brand-navy)] sm:text-3xl">
+						Enter 6-Digit Code
+					</h1>
+					<p className="mt-2 text-xs leading-5 text-slate-600">
+						{email
+							? `We sent a 6-digit code to ${email}.`
+							: "Open this page from registration to verify your email."}
+					</p>
+
+					<form
+						onSubmit={handleSubmit(onSubmit)}
+						className="mt-8 space-y-4"
+						noValidate
+					>
+						<input
+							aria-label="Verification code"
+							autoComplete="one-time-code"
+							inputMode="numeric"
+							maxLength={6}
+							{...register("code")}
+							className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3.5 text-center text-2xl font-bold tracking-[0.45em] outline-none focus:border-[var(--brand-pink)] focus:bg-white"
+							placeholder="000000"
+						/>
+						{errors.code && (
+							<p className="text-center text-xs text-red-600">
+								{errors.code.message}
+							</p>
+						)}
+						{error && (
+							<p
+								className="rounded-2xl bg-red-50 p-3 text-center text-xs font-semibold text-red-600"
+								role="alert"
+							>
+								{error}
+							</p>
+						)}
+						{message && (
+							<p
+								className="flex items-center justify-center gap-2 rounded-2xl bg-emerald-50 p-3 text-center text-xs font-semibold text-emerald-700"
+								role="status"
+							>
+								<CheckCircle2 size={16} />
+								<span>{message}</span>
+							</p>
+						)}
+						<button
+							type="submit"
+							disabled={isSubmitting}
+							className="w-full rounded-full bg-[var(--brand-pink)] py-3 text-xs font-bold text-white shadow-md transition-all hover:bg-[var(--brand-pink-dark)] active:scale-95 disabled:opacity-60"
+						>
+							{isSubmitting ? "Verifying..." : "Verify & Continue"}
+						</button>
+					</form>
+
+					<button
+						type="button"
+						onClick={() => void handleResend()}
+						disabled={!email}
+						className="mt-6 text-xs font-bold text-[var(--brand-pink)] hover:underline disabled:text-slate-400"
+					>
+						Resend Verification Code
+					</button>
+				</div>
 			</div>
 		</section>
 	)
