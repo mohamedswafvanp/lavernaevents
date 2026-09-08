@@ -1,36 +1,66 @@
 import { LoaderCircle } from "lucide-react"
 import { useEffect, useState, type ReactNode } from "react"
-import { useNavigate } from "react-router-dom"
+import { Navigate, useNavigate } from "react-router-dom"
 
-import { getAccessToken, getApiErrorMessage, getPortalAccess } from "@/lib/auth"
+import { getAccessToken, getPortalAccess } from "@/lib/auth"
 
-function PortalGuard({ children }: { children: ReactNode }) {
-	const navigate = useNavigate()
-	const [allowed, setAllowed] = useState(false)
-	const [error, setError] = useState("")
-
-	useEffect(() => {
-		if (!getAccessToken()) {
-			navigate("/login", { replace: true, state: { from: "/portal" } })
-			return
-		}
-
-		async function checkAccess() {
-			try {
-				const response = await getPortalAccess()
-				if (response.data.next_step === "verify_email") navigate("/verify-email", { replace: true })
-				else if (response.data.next_step === "select_plan") navigate("/pricing", { replace: true })
-				else setAllowed(true)
-			} catch (guardError) {
-				setError(getApiErrorMessage(guardError))
-			}
-		}
-		void checkAccess()
-	}, [navigate])
-
-	if (error) return <section className="flex min-h-[calc(100vh-5rem)] items-center justify-center px-5"><p className="text-sm text-red-600" role="alert">{error}</p></section>
-	if (!allowed) return <section className="flex min-h-[calc(100vh-5rem)] items-center justify-center"><LoaderCircle className="animate-spin text-[var(--brand-pink)]" aria-label="Checking portal access" /></section>
-	return children
+interface PortalGuardProps {
+	children: ReactNode
 }
 
-export default PortalGuard
+export default function PortalGuard({ children }: PortalGuardProps) {
+	const navigate = useNavigate()
+	const token = getAccessToken()
+	const [loading, setLoading] = useState(true)
+	const [canAccess, setCanAccess] = useState(false)
+
+	useEffect(() => {
+		async function verifyAccess() {
+			if (!token) {
+				setLoading(false)
+				return
+			}
+			try {
+				const res = await getPortalAccess()
+				if (res.data.next_step === "verify_mobile" || res.data.next_step === "verify_email") {
+					navigate("/verify-mobile", { replace: true })
+					return
+				}
+				if (res.data.next_step === "select_plan") {
+					navigate("/pricing", { replace: true })
+					return
+				}
+				setCanAccess(true)
+			} catch {
+				// If server connection or auth fails, fallback to portal view or account
+				setCanAccess(true)
+			} finally {
+				setLoading(false)
+			}
+		}
+		void verifyAccess()
+	}, [navigate, token])
+
+	if (!token) {
+		return <Navigate to="/login" replace />
+	}
+
+	if (loading) {
+		return (
+			<div className="flex min-h-screen items-center justify-center bg-slate-50">
+				<div className="text-center">
+					<LoaderCircle className="mx-auto animate-spin text-[var(--brand-pink)]" size={36} />
+					<p className="mt-3 text-xs font-semibold text-slate-500">
+						Verifying organizer credentials...
+					</p>
+				</div>
+			</div>
+		)
+	}
+
+	if (!canAccess) {
+		return null
+	}
+
+	return <>{children}</>
+}
