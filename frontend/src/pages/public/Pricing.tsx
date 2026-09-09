@@ -48,10 +48,10 @@ async function loadRazorpay() {
 
 function planFeatures(plan: MembershipPlan) {
 	return [
-		`${plan.guest_limit} guest${plan.guest_limit === 1 ? "" : "s"} capacity`,
-		`${plan.template_limit} invitation template${
-			plan.template_limit === 1 ? "" : "s"
-		}`,
+		`${plan.guest_limit ?? "Unlimited"} guest capacity`,
+		plan.template_names.length > 0
+			? `${plan.template_names.length} invitation template${plan.template_names.length === 1 ? "" : "s"}: ${plan.template_names.join(", ")}`
+			: "No invitation templates included",
 		`${plan.storage_limit_mb} MB cloud storage`,
 		plan.gallery_enabled
 			? "AI Photo gallery & face tagging"
@@ -223,7 +223,7 @@ function Pricing() {
 
 								<div className="mt-5 flex items-baseline gap-1.5">
 									<span className="text-4xl font-bold tracking-tight text-[var(--brand-navy)]">
-										${plan.price}
+										{Number(plan.price) === 0 ? "Free" : `$${plan.price}`}
 									</span>
 									<span className="text-xs text-slate-500 font-medium">
 										/ {plan.duration_days} days

@@ -12,13 +12,12 @@ import {
 import { useEffect, useState } from "react"
 import { Link } from "react-router-dom"
 
-import { getCurrentUser, getMyUsage, type UsageSummary } from "@/lib/auth"
+import { getMyUsage, type UsageSummary } from "@/lib/auth"
 import { getOrganizerOverview, type OrganizerOverviewStats } from "@/lib/dashboard"
 import { getEvents, type EventItem } from "@/lib/events"
 import { parseApiError } from "@/lib/api"
 
 export default function PortalDashboard() {
-	const user = getCurrentUser()
 	const [stats, setStats] = useState<OrganizerOverviewStats | null>(null)
 	const [usage, setUsage] = useState<UsageSummary | null>(null)
 	const [recentEvents, setRecentEvents] = useState<EventItem[]>([])
@@ -29,16 +28,9 @@ export default function PortalDashboard() {
 		async function loadData() {
 			try {
 				const [overviewRes, usageRes, eventsRes] = await Promise.all([
-					getOrganizerOverview().catch(() => ({
-						data: {
-							total_events: 0,
-							total_guests: 0,
-							total_accepted: 0,
-							total_expected_attendance: 0,
-						},
-					})),
-					getMyUsage().catch(() => ({ data: null })),
-					getEvents({ page_size: 4 }).catch(() => ({ data: [] })),
+					getOrganizerOverview(),
+					getMyUsage(),
+					getEvents({ page_size: 4 }),
 				])
 				setStats(overviewRes.data)
 				setUsage(usageRes.data)
@@ -65,20 +57,18 @@ export default function PortalDashboard() {
 			{/* Top Warm Welcome Card */}
 			<div className="gradient-hero-warm relative overflow-hidden rounded-[2rem] p-6 text-white soft-shadow-lg sm:rounded-[2.5rem] sm:p-8">
 				<div className="pointer-events-none absolute -right-12 -top-12 size-60 rounded-full bg-white/15 blur-2xl" />
-
 				<div className="relative z-10 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
 					<div>
 						<span className="rounded-full bg-white/20 px-3 py-0.5 text-[10px] font-bold uppercase tracking-wider backdrop-blur-xs">
 							{usage?.plan_name || "Active"} Tier
 						</span>
 						<h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl lg:text-4xl">
-							Welcome, {user?.full_name || "Organizer"}
+							Welcome to your workspace
 						</h1>
 						<p className="mt-1 text-xs text-orange-100/90 sm:text-sm">
 							Here is a summary of your celebrations, guests, and attendance metrics.
 						</p>
 					</div>
-
 					<Link
 						to="/portal/events"
 						className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-5 py-2.5 text-xs font-bold text-slate-900 shadow-md transition-all hover:bg-slate-100 active:scale-95 sm:px-6 sm:py-3 sm:text-sm"

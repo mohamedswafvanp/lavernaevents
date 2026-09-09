@@ -124,8 +124,21 @@
   * {
     @apply border-border outline-ring/50;
   }
+  html,
+  body,
+  #root {
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
   body {
     @apply bg-slate-50/70 text-foreground antialiased selection:bg-pink-100 selection:text-[var(--brand-pink)];
+  }
+  img,
+  svg,
+  video,
+  canvas {
+    max-width: 100%;
   }
   html {
     @apply font-sans scroll-smooth;
@@ -168,4 +181,10 @@
 
 .soft-shadow-lg {
   box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.08), 0 4px 12px -3px rgba(0, 0, 0, 0.03);
-}
+}
+
+@media (max-width: 639px) {
+  .mobile-safe-bottom {
+    padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));
+  }
+}

@@ -114,12 +114,11 @@ export type MembershipPlan = {
 	duration_days: number
 	guest_limit: number
 	event_limit: number
-	template_limit: number
+	template_names: string[]
 	storage_limit_mb: number
 	gallery_enabled: boolean
 	qr_code_enabled: boolean
 	photographer_access_enabled: boolean
-	templates?: Array<{ id: number; name: string; preview_image: string | null }>
 }
 
 export type Subscription = {
@@ -136,12 +135,11 @@ export type UsageSummary = {
 	has_active_plan: boolean
 	guest_limit: number | null
 	event_limit: number | null
-	template_limit: number | null
+	template_count: number | null
 	storage_limit_mb: number | null
 	gallery_enabled: boolean
 	qr_code_enabled: boolean
 	photographer_access_enabled: boolean
-	template_names?: string[]
 }
 
 export type PortalAccessData = {

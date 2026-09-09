@@ -4,7 +4,6 @@ import {
 	CalendarDays,
 	Camera,
 	CheckCircle2,
-	ChevronRight,
 	Download,
 	MapPin,
 	MessageCircle,
@@ -16,7 +15,7 @@ import {
 } from "lucide-react"
 import { useState } from "react"
 import { Link } from "react-router-dom"
-import { getCurrentUser } from "@/lib/auth"
+import logo from "@/assets/laverna-logo.png"
 
 const venueCategories = [
 	"All Venues",
@@ -123,8 +122,6 @@ const coreFeatures = [
 ]
 
 function Home() {
-	const user = getCurrentUser()
-	const userName = user?.full_name || "Willie Schulist"
 	const [activeCategory, setActiveCategory] = useState("All Venues")
 	const [activeVenueIndex, setActiveVenueIndex] = useState(0)
 
@@ -138,108 +135,44 @@ function Home() {
 	const currentVenue = filteredVenues[activeVenueIndex] || filteredVenues[0] || venues[0]
 
 	return (
-		<div className="min-h-screen bg-slate-50/70 pb-20 md:pb-12">
+		<div className="min-h-screen min-w-0 bg-slate-50/70 pb-20 md:pb-12">
 			{/* Main Container */}
-			<div className="mx-auto max-w-7xl px-3 pt-3 sm:px-6 sm:pt-8 lg:px-8">
+			<div className="mx-auto w-full max-w-7xl px-3 pt-3 sm:px-6 sm:pt-8 lg:px-8">
 				
 				{/* Top Grid: Hero Card + Quick Services / Showcase */}
-				<div className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr] lg:gap-8">
+				<div className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:gap-8">
 					
-					{/* LEFT COLUMN: Warm Gradient Welcome Card */}
+					{/* LEFT COLUMN: Public brand hero */}
 					<motion.div
 						initial={{ opacity: 0, y: 15 }}
 						animate={{ opacity: 1, y: 0 }}
 						transition={{ duration: 0.4 }}
-						className="flex flex-col gap-4"
+						className="flex min-w-0 flex-col gap-4"
 					>
-						{/* Sunset Gradient Hero Card */}
-						<div className="gradient-hero-warm relative w-full overflow-hidden rounded-[2rem] p-5 text-white soft-shadow-lg sm:rounded-[2.5rem] sm:p-7">
-							{/* Subtle background glow */}
-							<div className="pointer-events-none absolute -right-12 -top-12 size-56 rounded-full bg-white/15 blur-2xl" />
-							<div className="pointer-events-none absolute -bottom-16 -left-16 size-64 rounded-full bg-amber-400/20 blur-3xl" />
-
-							{/* Header Greeting */}
+						{/* Brand-first public hero */}
+						<div className="relative flex min-h-[23rem] min-w-0 w-full flex-col justify-between overflow-hidden rounded-[2rem] border border-slate-200/80 bg-white p-4 soft-shadow-lg sm:min-h-[27rem] sm:rounded-[2.5rem] sm:p-8">
+							<div className="pointer-events-none absolute -right-20 -top-24 size-72 rounded-full bg-pink-50 blur-3xl" />
 							<div className="relative z-10">
-								<p className="text-[11px] font-bold uppercase tracking-[0.2em] text-orange-100/90 sm:text-xs">
-									Welcome Back to Laverna Events
+								<img src={logo} alt="Laverna Events" className="h-auto w-[min(100%,22rem)] object-contain object-left" />
+								<p className="mt-5 max-w-md break-words text-[clamp(1.15rem,5.5vw,1.5rem)] font-semibold leading-tight text-[var(--brand-navy)] sm:mt-6 sm:text-2xl">
+									Celebrate beautifully. Connect meaningfully.
 								</p>
-								<h1 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl lg:text-4xl truncate">
-									{userName}
-								</h1>
+								<p className="mt-3 max-w-md break-words text-xs leading-5 text-slate-600 sm:text-sm sm:leading-6">
+									Plan events, bring guests together, and share every meaningful moment from one calm workspace.
+								</p>
 							</div>
-
-							{/* Pill Notification / Active Celebrations Badge */}
-							<div className="relative z-10 mt-4">
-								<Link
-									to="/portal"
-									className="group flex items-center justify-between rounded-2xl bg-white/20 p-2.5 pr-3.5 backdrop-blur-md transition-all hover:bg-white/25 active:scale-[0.99]"
-								>
-									<div className="flex items-center gap-2.5 min-w-0">
-										<div className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-orange-500 font-bold text-white text-xs shadow-xs">
-											2
-										</div>
-										<span className="truncate text-xs font-medium text-white sm:text-sm">
-											You have 2 celebrations in progress
-										</span>
-									</div>
-									<ChevronRight
-										size={17}
-										className="shrink-0 text-white/80 transition-transform group-hover:translate-x-1"
-									/>
+							<div className="relative z-10 flex flex-wrap gap-3">
+								<Link to="/register" className="inline-flex items-center justify-center rounded-full bg-[var(--brand-pink)] px-5 py-3 text-xs font-bold text-white shadow-md hover:bg-[var(--brand-pink-dark)]">
+									Start planning
 								</Link>
-							</div>
-
-							{/* Compact action buttons instead of long text panels */}
-							<div className="relative z-10 mt-4 w-full rounded-2xl bg-white/12 p-3 text-white shadow-lg ring-1 ring-white/20 backdrop-blur-md sm:rounded-3xl sm:p-4">
-								<div className="flex flex-wrap gap-2">
-									<Link
-										to="/portal"
-										className="inline-flex items-center gap-2 rounded-full bg-white/20 px-3 py-2 text-[11px] font-semibold text-white shadow-sm transition-all hover:bg-white/25 active:scale-95"
-									>
-										<span className="flex size-5 items-center justify-center rounded-full bg-orange-500 text-[10px] font-bold text-white">
-											2
-										</span>
-										<span>In Progress</span>
-									</Link>
-									<Link
-										to="/portal"
-										className="inline-flex items-center gap-2 rounded-full bg-white/20 px-3 py-2 text-[11px] font-semibold text-white shadow-sm transition-all hover:bg-white/25 active:scale-95"
-									>
-										<span className="flex size-5 items-center justify-center rounded-full bg-pink-500 text-[10px] font-bold text-white">
-											3
-										</span>
-										<span>Upcoming</span>
-									</Link>
-									<Link
-										to="/portal"
-										className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-2 text-[11px] font-bold text-slate-900 shadow-sm transition-all hover:bg-slate-100 active:scale-95"
-									>
-										<span>$2,322.98</span>
-									</Link>
-								</div>
-
-								<div className="mt-3 flex items-center justify-between gap-2 border-t border-white/20 pt-3">
-									<div className="min-w-0">
-										<p className="text-[10px] font-bold uppercase tracking-[0.18em] text-orange-100/90">
-											Due in 27 days
-										</p>
-										<p className="mt-1 truncate text-sm font-semibold text-white">
-											Maya & Jordan Wedding
-										</p>
-									</div>
-									<Link
-										to="/portal"
-										className="inline-flex items-center gap-1.5 rounded-full bg-slate-900 px-3.5 py-2 text-[11px] font-semibold text-white shadow-sm transition-all hover:bg-slate-800 active:scale-95"
-									>
-										<span>View</span>
-										<ChevronRight size={12} />
-									</Link>
-								</div>
+								<Link to="/login" className="inline-flex items-center justify-center rounded-full border border-slate-200 bg-white px-5 py-3 text-xs font-bold text-[var(--brand-navy)] hover:bg-slate-50">
+									Sign in
+								</Link>
 							</div>
 						</div>
 
 						{/* Services / Quick Actions Grid */}
-						<div className="rounded-[2rem] border border-slate-200/80 bg-white p-4 soft-shadow sm:rounded-3xl sm:p-6">
+						<div className="min-w-0 rounded-[2rem] border border-slate-200/80 bg-white p-4 soft-shadow sm:rounded-3xl sm:p-6">
 							<div className="flex items-center justify-between">
 								<h2 className="text-sm font-bold text-[var(--brand-navy)] sm:text-base">
 									Services & Quick Actions
@@ -249,14 +182,14 @@ function Home() {
 								</span>
 							</div>
 
-							<div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-2.5">
+							<div className="mt-3 grid min-w-0 grid-cols-1 gap-2 min-[380px]:grid-cols-2 sm:grid-cols-3 sm:gap-2.5">
 								{quickServices.map((service) => {
 									const Icon = service.icon
 									return (
 										<Link
 											key={service.label}
 											to={service.link}
-											className="flex items-center gap-2 rounded-2xl border border-slate-100 bg-slate-50/80 p-2.5 text-xs font-semibold text-slate-700 transition-all hover:border-pink-200 hover:bg-pink-50/50 hover:text-[var(--brand-pink)] active:scale-95"
+											className="flex min-w-0 items-center gap-2 rounded-2xl border border-slate-100 bg-slate-50/80 p-2.5 text-xs font-semibold text-slate-700 transition-all hover:border-pink-200 hover:bg-pink-50/50 hover:text-[var(--brand-pink)] active:scale-95"
 										>
 											<div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-white text-[var(--brand-pink)] shadow-2xs">
 												<Icon size={14} />
@@ -274,7 +207,7 @@ function Home() {
 						initial={{ opacity: 0, y: 15 }}
 						animate={{ opacity: 1, y: 0 }}
 						transition={{ duration: 0.4, delay: 0.08 }}
-						className="flex flex-col gap-4"
+						className="flex min-w-0 flex-col gap-4"
 					>
 						{/* Section: Events & Stories Carousel */}
 						<div className="rounded-[2rem] border border-slate-200/80 bg-white p-4 soft-shadow sm:rounded-3xl sm:p-6">
@@ -363,7 +296,7 @@ function Home() {
 											</div>
 											<div className="min-w-0">
 												<p className="text-xs font-bold text-white leading-tight truncate sm:text-sm">
-													{userName}
+																	Your guest pass
 												</p>
 												<span className="text-[10px] text-orange-200 truncate block">
 													Premium Member · VIP

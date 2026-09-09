@@ -33,9 +33,9 @@ function PublicLayout() {
 	}
 
 	return (
-		<div className="flex min-h-screen flex-col bg-slate-50/50">
+		<div className="flex min-h-screen min-w-0 flex-col bg-slate-50/50">
 			<Navbar />
-			<main className="flex-1 pb-20 md:pb-0">
+			<main className="min-w-0 flex-1 pb-20 md:pb-0">
 				{isNavigating ? (
 					<PageSkeleton />
 				) : (

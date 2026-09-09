@@ -109,7 +109,7 @@ function DemoOnboarding() {
 		if (step === 1) {
 			setIsRegistering(true)
 			try {
-				await verifyEmail({ email: profile.email, code })
+				await verifyEmail({ mobile_number: profile.mobile, code })
 				await loginUser({
 					mobile_number: profile.mobile,
 					password: profile.password,
@@ -124,7 +124,7 @@ function DemoOnboarding() {
 					storageLimit: plan.storage_limit_mb,
 					features: [
 						`${plan.guest_limit} guests`,
-						`${plan.template_limit} templates`,
+						`${plan.template_names.length} templates`,
 						`${plan.storage_limit_mb} MB storage`,
 						plan.gallery_enabled ? "Photo gallery" : "No photo gallery",
 						plan.qr_code_enabled ? "QR features" : "No QR features",
@@ -194,7 +194,7 @@ function DemoOnboarding() {
 	const handleResend = async () => {
 		setError("")
 		try {
-			const response = await resendOtp(profile.email)
+			const response = await resendOtp(profile.mobile)
 			setError(response.message ?? "A new verification code was sent.")
 		} catch (resendError) {
 			setError(getApiErrorMessage(resendError))

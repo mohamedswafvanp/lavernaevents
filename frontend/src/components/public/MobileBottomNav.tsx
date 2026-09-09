@@ -54,9 +54,9 @@ export default function MobileBottomNav() {
 	return (
 		<nav
 			aria-label="Mobile Bottom Navigation"
-			className="fixed bottom-0 left-0 right-0 z-50 block border-t border-slate-200/90 bg-white/95 px-2 py-2 backdrop-blur-lg shadow-[0_-4px_20px_rgba(0,0,0,0.06)] md:hidden"
+			className="mobile-safe-bottom fixed bottom-0 left-0 right-0 z-50 block border-t border-slate-200/90 bg-white/95 px-2 py-2 backdrop-blur-lg shadow-[0_-4px_20px_rgba(0,0,0,0.06)] md:hidden"
 		>
-			<div className="mx-auto flex max-w-md items-center justify-around">
+			<div className="mx-auto flex min-w-0 max-w-md items-center justify-around">
 				{navItems.map((item) => {
 					const Icon = item.icon
 					return (
@@ -64,7 +64,7 @@ export default function MobileBottomNav() {
 							key={item.id}
 							type="button"
 							onClick={() => navigate(item.path)}
-							className={`relative flex flex-col items-center justify-center py-1 px-3 transition-all duration-200 active:scale-95 ${
+							className={`relative min-w-0 flex-1 flex flex-col items-center justify-center py-1 px-1 transition-all duration-200 active:scale-95 ${
 								item.isActive
 									? "text-[var(--brand-pink)] font-bold"
 									: "text-slate-500 hover:text-slate-800"
@@ -80,7 +80,7 @@ export default function MobileBottomNav() {
 									<span className="absolute -bottom-1 left-1/2 -translate-x-1/2 h-1 w-1 rounded-full bg-[var(--brand-pink)]" />
 								)}
 							</div>
-							<span className="mt-1 text-[11px] leading-none tracking-tight">
+							<span className="mt-1 max-w-full truncate text-[10px] leading-none tracking-tight">
 								{item.label}
 							</span>
 						</button>

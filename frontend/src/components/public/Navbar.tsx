@@ -2,6 +2,7 @@ import { CircleUserRound, Sparkles } from "lucide-react"
 import { useEffect, useState } from "react"
 import { Link, useLocation, useNavigate } from "react-router-dom"
 
+import logo from "@/assets/laverna-logo.png"
 import { getAccessToken, getCurrentUser, logoutUser } from "@/lib/auth"
 
 const links = [
@@ -41,15 +42,14 @@ function Navbar() {
 		<header className="sticky top-0 z-40 border-b border-slate-100 bg-white/95 backdrop-blur-md">
 			<nav
 				aria-label="Main navigation"
-				className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8"
+				className="mx-auto flex h-16 min-w-0 max-w-7xl items-center justify-between gap-2 px-3 sm:px-6 lg:px-8"
 			>
 				{/* Brand Logo */}
 				<Link
 					to="/"
-					className="flex items-center gap-1.5 text-base font-bold tracking-[0.16em] text-[var(--brand-navy)] sm:text-lg"
+					className="flex min-w-0 items-center"
 				>
-					<span>LAVERNA</span>
-					<span className="text-[var(--brand-pink)]">EVENTS</span>
+					<img src={logo} alt="Laverna Events" className="h-auto w-[8.75rem] max-w-[42vw] object-contain sm:w-40" />
 				</Link>
 
 				{/* Desktop Navigation Links */}
@@ -123,7 +123,7 @@ function Navbar() {
 					) : (
 						<Link
 							to="/register"
-							className="rounded-full bg-[var(--brand-pink)] px-3.5 py-1.5 text-xs font-bold text-white shadow-xs"
+							className="shrink-0 rounded-full bg-[var(--brand-pink)] px-3.5 py-1.5 text-xs font-bold text-white shadow-xs"
 						>
 							Register
 						</Link>

@@ -70,7 +70,10 @@ import {
 } from "@/lib/invitations"
 import {
 	markWhatsAppSent,
+	retryWhatsAppSend,
 	sendWhatsAppInvitation,
+	getEventWhatsAppLogs,
+	type WhatsAppLogItem,
 } from "@/lib/whatsapp"
 
 const RESPONSE_COLORS = {
@@ -112,7 +115,7 @@ export default function EventDetailView() {
 		name: "",
 		mobile_number: "",
 		email: "",
-		family_members_count: 0,
+		family_member_count: 0,
 		notes: "",
 	})
 	const [editingGuest, setEditingGuest] = useState<GuestItem | null>(null)
@@ -125,6 +128,7 @@ export default function EventDetailView() {
 	const [selectedTemplateId, setSelectedTemplateId] = useState<number | "">("")
 	const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null)
 	const [whatsAppSentLogId, setWhatsAppSentLogId] = useState<number | null>(null)
+	const [whatsappLogs, setWhatsappLogs] = useState<WhatsAppLogItem[]>([])
 
 	// Edit Event State
 	const [editForm, setEditForm] = useState<Partial<EventItem>>({})
@@ -181,8 +185,21 @@ export default function EventDetailView() {
 			])
 			setTemplates(tempRes.data || [])
 			setInvitations(invRes.data || [])
+			const logsRes = await getEventWhatsAppLogs(eventId).catch(() => ({ data: [] as WhatsAppLogItem[] }))
+			setWhatsappLogs(logsRes.data || [])
 		} catch (err) {
 			console.error(err)
+		}
+	}
+
+	const handleRetryWhatsApp = async (logId: number) => {
+		try {
+			const res = await retryWhatsAppSend(logId)
+			if (res.data.wa_link) window.open(res.data.wa_link, "_blank")
+			setWhatsAppSentLogId(res.data.log_id)
+			void loadInvitationsAndTemplates()
+		} catch (err) {
+			alert(parseApiError(err))
 		}
 	}
 
@@ -213,7 +230,7 @@ export default function EventDetailView() {
 				name: "",
 				mobile_number: "",
 				email: "",
-				family_members_count: 0,
+				family_member_count: 0,
 				notes: "",
 			})
 			void loadGuests(1)
@@ -265,7 +282,7 @@ export default function EventDetailView() {
 				template_id: Number(selectedTemplateId),
 			})
 			setIsGenerateOpen(false)
-			setPreviewImageUrl(res.data.image_url || res.data.image_file)
+			setPreviewImageUrl(res.data.image_file)
 			void loadInvitationsAndTemplates()
 			void loadGuests(guestPage)
 			void loadDashboard()
@@ -486,10 +503,10 @@ export default function EventDetailView() {
 								Invitations Sent
 							</p>
 							<p className="mt-2 text-3xl font-bold text-[var(--brand-pink)]">
-								{dashboardStats?.invitations_sent_count ?? 0}
+											{dashboardStats?.invitations_sent ?? 0}
 							</p>
 							<p className="mt-1 text-[11px] text-slate-500">
-								Not Sent: {dashboardStats?.invitations_not_sent_count ?? 0}
+											Not Sent: {dashboardStats?.invitations_not_sent ?? 0} · Failed: {dashboardStats?.invitations_failed ?? 0}
 							</p>
 						</div>
 					</div>
@@ -674,6 +691,19 @@ label={({ name, percent }) =>
 												</div>
 
 												<div className="flex shrink-0 items-center gap-1">
+															{invitations.find((inv) => inv.guest === g.id) && (
+																<button
+																	type="button"
+																	onClick={() => {
+																	const invitation = invitations.find((inv) => inv.guest === g.id)
+																	if (invitation) void handleSendWhatsApp(invitation.id)
+																}}
+																	className="rounded-full p-1.5 text-emerald-600 hover:bg-emerald-50"
+																	title="Send invitation via WhatsApp"
+																>
+																	<MessageCircle size={15} />
+																</button>
+															)}
 													{editingGuest?.id === g.id ? (
 														<button
 															type="button"
@@ -712,11 +742,11 @@ label={({ name, percent }) =>
 													<input
 														type="number"
 														min={0}
-														value={editingGuest.family_members_count}
+															value={editingGuest.family_member_count}
 														onChange={(e) =>
 															setEditingGuest({
 																...editingGuest,
-																family_members_count: Number(e.target.value),
+																family_member_count: Number(e.target.value),
 															})
 														}
 														className="w-20 rounded-lg border border-slate-300 px-2 py-1 text-xs"
@@ -752,7 +782,7 @@ label={({ name, percent }) =>
 												</span>
 
 												<span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[10px] font-bold text-slate-600">
-													Family: {g.family_members_count}
+															Family: {g.family_member_count}
 												</span>
 											</div>
 										</div>
@@ -787,17 +817,17 @@ label={({ name, percent }) =>
 																<input
 																	type="number"
 																	min={0}
-																	value={editingGuest.family_members_count}
+																	value={editingGuest.family_member_count}
 																	onChange={(e) =>
 																		setEditingGuest({
 																			...editingGuest,
-																			family_members_count: Number(e.target.value),
+																			family_member_count: Number(e.target.value),
 																		})
 																	}
 																	className="w-16 rounded-lg border border-slate-300 px-2 py-1 text-xs"
 																/>
 															) : (
-																<span>{g.family_members_count}</span>
+																<span>{g.family_member_count}</span>
 															)}
 														</td>
 														<td className="px-5 py-3">
@@ -829,6 +859,19 @@ label={({ name, percent }) =>
 															</span>
 														</td>
 														<td className="px-5 py-3 text-right">
+																	{invitations.find((inv) => inv.guest === g.id) && (
+																		<button
+																			type="button"
+																			onClick={() => {
+																			const invitation = invitations.find((inv) => inv.guest === g.id)
+																			if (invitation) void handleSendWhatsApp(invitation.id)
+																		}}
+																		className="rounded-full p-1.5 text-emerald-600 hover:bg-emerald-50 mr-1"
+																			title="Send invitation via WhatsApp"
+																		>
+																			<MessageCircle size={14} />
+																		</button>
+																	)}
 															{editingGuest?.id === g.id ? (
 																<button
 																	type="button"
@@ -938,23 +981,23 @@ label={({ name, percent }) =>
 										<div>
 											<div className="flex items-center justify-between">
 												<span className="text-[10px] font-bold text-slate-500 uppercase">
-													{inv.template?.name || "Template"}
+															{inv.template_name || "Template"}
 												</span>
 												<span
 													className={`rounded-full px-2 py-0.5 text-[9px] font-bold ${
-														inv.render_status === "SUCCESS"
+															inv.status === "SUCCESS"
 															? "bg-emerald-100 text-emerald-800"
 															: "bg-amber-100 text-amber-800"
 													}`}
 												>
-													{inv.render_status}
+															{inv.status}
 												</span>
 											</div>
 
 											<h5 className="mt-2 text-sm font-bold text-slate-900">
-												{inv.guest.name}
+														{inv.guest_name}
 											</h5>
-											<p className="text-xs text-slate-500">{inv.guest.mobile_number}</p>
+											<p className="text-xs text-slate-500">Invitation history</p>
 
 											{inv.image_file && (
 												<button
@@ -981,7 +1024,7 @@ label={({ name, percent }) =>
 											{inv.image_file && (
 												<a
 													href={inv.image_file}
-													download={`invitation_${inv.guest.name}.png`}
+															download={`invitation_${inv.guest_name}.png`}
 													target="_blank"
 													rel="noopener noreferrer"
 													className="flex size-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 hover:bg-slate-100"
@@ -989,6 +1032,19 @@ label={({ name, percent }) =>
 												>
 													<Download size={14} />
 												</a>
+											)}
+											{whatsappLogs.find((log) => log.guest === inv.guest && log.status !== "SENT") && (
+												<button
+													type="button"
+													onClick={() => {
+													const log = whatsappLogs.find((item) => item.guest === inv.guest && item.status !== "SENT")
+													if (log) void handleRetryWhatsApp(log.id)
+												}}
+												className="flex size-8 items-center justify-center rounded-full border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"
+												title="Retry WhatsApp send"
+											>
+												<RefreshCw size={14} />
+											</button>
 											)}
 										</div>
 									</div>
@@ -1178,11 +1234,11 @@ label={({ name, percent }) =>
 								<input
 									type="number"
 									min={0}
-									value={guestForm.family_members_count}
+															value={guestForm.family_member_count}
 									onChange={(e) =>
 										setGuestForm({
 											...guestForm,
-											family_members_count: Number(e.target.value),
+																family_member_count: Number(e.target.value),
 										})
 									}
 									className="mt-1 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-xs outline-none focus:border-[var(--brand-pink)] focus:bg-white"
@@ -1266,7 +1322,7 @@ label={({ name, percent }) =>
 						) : (
 							<div className="mt-4 space-y-4">
 								<p className="text-xs text-slate-600 leading-5">
-									Upload a CSV file containing columns: <span className="font-mono font-bold">name, mobile_number, email, family_members_count, notes</span>.
+											Upload a CSV file containing columns: <span className="font-mono font-bold">name, mobile_number, email, family_member_count, notes</span>.
 								</p>
 
 								<input

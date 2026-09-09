@@ -13,9 +13,9 @@ export interface EventDashboardStats {
 	rejected_count: number
 	maybe_count: number
 	pending_count: number
-	invitations_sent_count: number
-	invitations_not_sent_count: number
-	invitations_failed_count: number
+	invitations_sent: number
+	invitations_not_sent: number
+	invitations_failed: number
 	expected_attendance: number
 }
 

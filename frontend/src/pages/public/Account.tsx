@@ -161,7 +161,7 @@ function Account() {
 									<li className="flex items-center justify-between border-b border-slate-100 pb-2">
 										<span className="font-medium text-slate-900">Invitation Templates</span>
 										<span className="font-bold text-[var(--brand-pink)]">
-											{usage.template_limit ?? "Unlimited"}
+											{usage.template_count ?? "Unlimited"}
 										</span>
 									</li>
 									<li className="flex items-center justify-between border-b border-slate-100 pb-2">
