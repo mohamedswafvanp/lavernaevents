@@ -9,7 +9,7 @@ export interface GuestItem {
 	name: string
 	mobile_number: string
 	email?: string
-	family_members_count: number
+	family_member_count: number
 	notes?: string
 	response_status: ResponseStatus
 	invitation_status: InvitationStatus

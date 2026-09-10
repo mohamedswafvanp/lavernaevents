@@ -48,10 +48,10 @@ async function loadRazorpay() {
 
 function planFeatures(plan: MembershipPlan) {
 	return [
-		`${plan.guest_limit} guest${plan.guest_limit === 1 ? "" : "s"} capacity`,
-		`${plan.template_limit} invitation template${
-			plan.template_limit === 1 ? "" : "s"
-		}`,
+		`${plan.guest_limit ?? "Unlimited"} guest capacity`,
+		plan.template_names.length > 0
+			? `${plan.template_names.length} invitation template${plan.template_names.length === 1 ? "" : "s"}: ${plan.template_names.join(", ")}`
+			: "No invitation templates included",
 		`${plan.storage_limit_mb} MB cloud storage`,
 		plan.gallery_enabled
 			? "AI Photo gallery & face tagging"
@@ -105,14 +105,14 @@ function Pricing() {
 				const response = await changePlan(plan.slug)
 				setActiveSlug(response.data.subscription.plan.slug)
 				setNotice(`Plan ${response.data.change_type} completed successfully.`)
-				navigate("/account")
+				navigate("/portal/account")
 			} else if (Number(plan.price) === 0) {
 				const response = await subscribeToPlan(plan.slug)
 				setActiveSlug(response.data.plan.slug)
 				setNotice(response.message ?? "Subscribed successfully.")
 				const access = await getPortalAccess()
 				if (access.data.next_step === null) navigate("/portal")
-				else navigate("/account")
+				else navigate("/portal/account")
 			} else {
 				const order = await createPaymentOrder(plan.slug)
 				await loadRazorpay()
@@ -130,7 +130,7 @@ function Pricing() {
 							.then(async () => {
 								const access = await getPortalAccess()
 								if (access.data.next_step === null) navigate("/portal")
-								else navigate("/account")
+										else navigate("/portal/account")
 							})
 							.catch((paymentError) =>
 								setError(getApiErrorMessage(paymentError))
@@ -223,7 +223,7 @@ function Pricing() {
 
 								<div className="mt-5 flex items-baseline gap-1.5">
 									<span className="text-4xl font-bold tracking-tight text-[var(--brand-navy)]">
-										${plan.price}
+										{Number(plan.price) === 0 ? "Free" : `$${plan.price}`}
 									</span>
 									<span className="text-xs text-slate-500 font-medium">
 										/ {plan.duration_days} days
@@ -273,7 +273,7 @@ function Pricing() {
 					<p className="mt-10 text-center text-xs text-slate-600">
 						View your current subscription and limits in{" "}
 						<Link
-							to="/account"
+							to="/portal/account"
 							className="font-bold text-[var(--brand-pink)] hover:underline"
 						>
 							Account

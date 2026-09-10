@@ -91,7 +91,7 @@ function Respond() {
 						<X size={28} />
 					</div>
 					<h1 className="mt-4 text-xl font-bold text-[var(--brand-navy)] sm:text-2xl">
-						Invitation Link Expired or Invalid
+						This invitation link isn&apos;t valid
 					</h1>
 					<p className="mt-2 text-xs leading-5 text-slate-600">
 						This invitation link is not valid or has been deactivated by the host. Please reach out to your event organizer for a fresh link.

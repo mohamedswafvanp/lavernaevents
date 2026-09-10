@@ -13,6 +13,7 @@ export default function PortalGuard({ children }: PortalGuardProps) {
 	const token = getAccessToken()
 	const [loading, setLoading] = useState(true)
 	const [canAccess, setCanAccess] = useState(false)
+	const [error, setError] = useState("")
 
 	useEffect(() => {
 		async function verifyAccess() {
@@ -27,13 +28,12 @@ export default function PortalGuard({ children }: PortalGuardProps) {
 					return
 				}
 				if (res.data.next_step === "select_plan") {
-					navigate("/pricing", { replace: true })
+					navigate("/portal/membership", { replace: true })
 					return
 				}
 				setCanAccess(true)
-			} catch {
-				// If server connection or auth fails, fallback to portal view or account
-				setCanAccess(true)
+			} catch (accessError) {
+				setError(accessError instanceof Error ? accessError.message : "Unable to verify portal access.")
 			} finally {
 				setLoading(false)
 			}
@@ -59,7 +59,16 @@ export default function PortalGuard({ children }: PortalGuardProps) {
 	}
 
 	if (!canAccess) {
-		return null
+		return (
+			<div className="flex min-h-screen items-center justify-center bg-slate-50 p-4">
+				<div className="rounded-3xl border border-rose-200 bg-white p-8 text-center shadow-sm">
+					<p className="text-sm font-semibold text-rose-700">{error || "Portal access could not be verified."}</p>
+					<button type="button" onClick={() => navigate("/login", { replace: true })} className="mt-4 rounded-full bg-[var(--brand-pink)] px-5 py-2 text-xs font-bold text-white">
+						Return to login
+					</button>
+				</div>
+			</div>
+		)
 	}
 
 	return <>{children}</>

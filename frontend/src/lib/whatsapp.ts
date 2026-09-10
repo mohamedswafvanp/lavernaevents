@@ -11,13 +11,12 @@ export interface WhatsAppSendResult {
 
 export interface WhatsAppLogItem {
 	id: number
-	event: number
-	invitation: number
+	guest: number
 	guest_name: string
-	mobile_number: string
+	wa_link: string
 	status: "SENT" | "NOT_SENT" | "FAILED"
-	attempt_count: number
-	last_attempt_at: string
+	retry_count: number
+	created_at: string
 }
 
 export async function sendWhatsAppInvitation(invitation_pk: number | string) {

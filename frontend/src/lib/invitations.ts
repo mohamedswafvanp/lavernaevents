@@ -5,40 +5,33 @@ export interface InvitationTemplateItem {
 	name: string
 	description: string
 	preview_image: string | null
-	is_active: boolean
 	display_order: number
 }
 
 export interface EventInvitationItem {
 	id: number
-	event: number
-	guest: {
-		id: number
-		name: string
-		mobile_number: string
-		response_status: string
-		invitation_status: string
-	}
-	template: {
-		id: number
-		name: string
-	} | null
-	image_file: string | null
+	guest: number
+	guest_name: string
+	template: number
+	template_name: string
 	response_token: string
-	render_status: "PENDING" | "SUCCESS" | "FAILED"
+	image_file: string | null
+	pdf_file: string | null
+	status: "PENDING" | "SUCCESS" | "FAILED"
 	created_at: string
 }
 
 export interface GenerateInvitationResult {
-	invitation_id: number
-	image_url: string
-	image_file: string
-	guest_id: number
+	id: number
+	guest: number
 	guest_name: string
-	template_id: number
+	template: number
 	template_name: string
-	render_status: string
-	response_token?: string
+	response_token: string
+	image_file: string | null
+	pdf_file: string | null
+	status: "PENDING" | "SUCCESS" | "FAILED"
+	created_at: string
 }
 
 export async function getPlanTemplates() {
