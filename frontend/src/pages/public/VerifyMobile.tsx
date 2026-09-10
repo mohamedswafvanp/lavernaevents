@@ -73,8 +73,8 @@ function VerifyMobile() {
 	}
 
 	return (
-		<section className="min-h-screen bg-slate-50/70 pb-20">
-			<div className="mx-auto max-w-md px-4 pt-8 sm:px-6 sm:pt-14">
+		<section className="flex min-h-[calc(100vh-9rem)] items-center justify-center bg-slate-50/70 px-4 py-6 sm:px-6 md:min-h-[calc(100vh-8rem)]">
+			<div className="w-full max-w-md">
 				<div className="rounded-[2.5rem] border border-slate-200/80 bg-white p-6 soft-shadow-lg sm:p-9 text-center">
 					<div className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-pink-50 text-[var(--brand-pink)] shadow-2xs">
 						<ShieldCheck size={26} />

@@ -32,8 +32,8 @@ function ForgotPassword() {
 	}
 
 	return (
-		<section className="min-h-screen bg-slate-50/70 pb-16">
-			<div className="mx-auto max-w-md px-4 pt-8 sm:px-6 sm:pt-14">
+		<section className="flex min-h-[calc(100vh-9rem)] items-center justify-center bg-slate-50/70 px-4 py-6 sm:px-6 md:min-h-[calc(100vh-8rem)]">
+			<div className="w-full max-w-md">
 				<div className="rounded-[2.5rem] border border-slate-200/80 bg-white p-7 soft-shadow-lg sm:p-9 text-center">
 					<span className="rounded-full bg-pink-50 px-3.5 py-1 text-xs font-bold uppercase tracking-wider text-[var(--brand-pink)]">
 						Account Recovery

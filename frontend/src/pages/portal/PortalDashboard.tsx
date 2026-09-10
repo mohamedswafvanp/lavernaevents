@@ -12,7 +12,7 @@ import {
 import { useEffect, useState } from "react"
 import { Link } from "react-router-dom"
 
-import { getMyUsage, type UsageSummary } from "@/lib/auth"
+import { getCurrentUser, getMyUsage, type UsageSummary } from "@/lib/auth"
 import { getOrganizerOverview, type OrganizerOverviewStats } from "@/lib/dashboard"
 import { getEvents, type EventItem } from "@/lib/events"
 import { parseApiError } from "@/lib/api"
@@ -23,6 +23,8 @@ export default function PortalDashboard() {
 	const [recentEvents, setRecentEvents] = useState<EventItem[]>([])
 	const [loading, setLoading] = useState(true)
 	const [error, setError] = useState("")
+	const currentUser = getCurrentUser()
+	const firstName = currentUser?.full_name?.trim()?.split(/\s+/)[0] ?? "User"
 
 	useEffect(() => {
 		async function loadData() {
@@ -63,7 +65,7 @@ export default function PortalDashboard() {
 							{usage?.plan_name || "Active"} Tier
 						</span>
 						<h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl lg:text-4xl">
-							Welcome to your workspace
+							Welcome to your {firstName}
 						</h1>
 						<p className="mt-1 text-xs text-orange-100/90 sm:text-sm">
 							Here is a summary of your celebrations, guests, and attendance metrics.

@@ -13,9 +13,10 @@ import {
 	Users,
 	Video,
 } from "lucide-react"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Link } from "react-router-dom"
 import logo from "@/assets/laverna-logo.png"
+import { getAccessToken } from "@/lib/auth"
 
 const venueCategories = [
 	"All Venues",
@@ -124,6 +125,20 @@ const coreFeatures = [
 function Home() {
 	const [activeCategory, setActiveCategory] = useState("All Venues")
 	const [activeVenueIndex, setActiveVenueIndex] = useState(0)
+	const [isAuthenticated, setIsAuthenticated] = useState(Boolean(getAccessToken()))
+
+	useEffect(() => {
+		const updateAuthState = () => setIsAuthenticated(Boolean(getAccessToken()))
+		updateAuthState()
+		window.addEventListener("laverna-auth-change", updateAuthState)
+		window.addEventListener("storage", updateAuthState)
+		window.addEventListener("pageshow", updateAuthState)
+		return () => {
+			window.removeEventListener("laverna-auth-change", updateAuthState)
+			window.removeEventListener("storage", updateAuthState)
+			window.removeEventListener("pageshow", updateAuthState)
+		}
+	}, [])
 
 	const filteredVenues =
 		activeCategory === "All Venues"
@@ -161,12 +176,12 @@ function Home() {
 									Plan events, bring guests together, and share every meaningful moment from one calm workspace.
 								</p>
 							</div>
-							<div className="relative z-10 flex flex-wrap gap-3">
-								<Link to="/register" className="inline-flex items-center justify-center rounded-full bg-[var(--brand-pink)] px-5 py-3 text-xs font-bold text-white shadow-md hover:bg-[var(--brand-pink-dark)]">
-									Start planning
+								<div className="relative z-10 mt-6 flex flex-wrap gap-3">
+								<Link to={isAuthenticated ? "/portal" : "/register"} className="inline-flex items-center justify-center rounded-full bg-[var(--brand-pink)] px-5 py-3 text-xs font-bold text-white shadow-md hover:bg-[var(--brand-pink-dark)]">
+									{isAuthenticated ? "Open portal" : "Start planning"}
 								</Link>
-								<Link to="/login" className="inline-flex items-center justify-center rounded-full border border-slate-200 bg-white px-5 py-3 text-xs font-bold text-[var(--brand-navy)] hover:bg-slate-50">
-									Sign in
+								<Link to={isAuthenticated ? "/portal/account" : "/login"} className="inline-flex items-center justify-center rounded-full border border-slate-200 bg-white px-5 py-3 text-xs font-bold text-[var(--brand-navy)] hover:bg-slate-50">
+									{isAuthenticated ? "Account" : "Sign in"}
 								</Link>
 							</div>
 						</div>

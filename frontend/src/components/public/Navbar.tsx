@@ -2,7 +2,7 @@ import { CircleUserRound, Sparkles } from "lucide-react"
 import { useEffect, useState } from "react"
 import { Link, useLocation, useNavigate } from "react-router-dom"
 
-import logo from "@/assets/laverna-logo.png"
+import logo from "@/assets/laverna logo transparent.png"
 import { getAccessToken, getCurrentUser, logoutUser } from "@/lib/auth"
 
 const links = [
@@ -25,35 +25,42 @@ function Navbar() {
 			setIsAuthenticated(Boolean(getAccessToken()))
 			setUserName(getCurrentUser()?.full_name ?? "")
 		}
+		updateAuthState()
 		window.addEventListener("laverna-auth-change", updateAuthState)
 		window.addEventListener("storage", updateAuthState)
+		window.addEventListener("pageshow", updateAuthState)
 		return () => {
 			window.removeEventListener("laverna-auth-change", updateAuthState)
 			window.removeEventListener("storage", updateAuthState)
+			window.removeEventListener("pageshow", updateAuthState)
 		}
-	}, [])
+	}, [location.pathname])
 
 	const handleLogout = async () => {
 		await logoutUser().catch(() => undefined)
-		navigate("/login")
+		navigate("/", { replace: true })
 	}
 
 	return (
-		<header className="sticky top-0 z-40 border-b border-slate-100 bg-white/95 backdrop-blur-md">
+		<header className="sticky top-0 z-40 w-full border-b border-slate-200/80 bg-white shadow-[0_1px_0_rgba(15,23,42,0.04)] backdrop-blur-md">
 			<nav
 				aria-label="Main navigation"
-				className="mx-auto flex h-16 min-w-0 max-w-7xl items-center justify-between gap-2 px-3 sm:px-6 lg:px-8"
+				className="mx-auto flex h-16 min-w-0 w-full max-w-7xl items-center justify-between gap-3 px-3 sm:px-6 lg:px-8"
 			>
 				{/* Brand Logo */}
 				<Link
 					to="/"
-					className="flex min-w-0 items-center"
+					className="flex shrink-0 items-center"
 				>
-					<img src={logo} alt="Laverna Events" className="h-auto w-[8.75rem] max-w-[42vw] object-contain sm:w-40" />
+					<img
+						src={logo}
+						alt="Laverna Events"
+						className="h-auto w-[9rem] max-w-[42vw] shrink-0 object-contain sm:w-[11rem]"
+					/>
 				</Link>
 
 				{/* Desktop Navigation Links */}
-				<div className="hidden items-center gap-1 lg:flex">
+				<div className="hidden shrink-0 items-center gap-1 lg:flex">
 					{links.map((link) => {
 						const isActive = location.pathname === link.href
 						return (
@@ -73,7 +80,7 @@ function Navbar() {
 				</div>
 
 				{/* Desktop CTA / Auth */}
-				<div className="hidden items-center gap-3 lg:flex">
+				<div className="hidden shrink-0 items-center gap-3 lg:flex">
 					{isAuthenticated ? (
 						<>
 							<Link
@@ -111,7 +118,7 @@ function Navbar() {
 				</div>
 
 				{/* Mobile Right: Direct CTA without 3-lines menu */}
-				<div className="flex items-center gap-2 lg:hidden">
+				<div className="flex shrink-0 items-center gap-2 lg:hidden">
 					{isAuthenticated ? (
 						<Link
 							to="/portal"

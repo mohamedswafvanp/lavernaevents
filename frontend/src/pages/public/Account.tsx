@@ -5,6 +5,7 @@ import { Link, useNavigate } from "react-router-dom"
 
 import {
 	getApiErrorMessage,
+	getCurrentUser,
 	getMySubscription,
 	getMyUsage,
 	type Subscription,
@@ -17,6 +18,7 @@ function Account() {
 	const [usage, setUsage] = useState<UsageSummary | null>(null)
 	const [loading, setLoading] = useState(true)
 	const [error, setError] = useState("")
+	const user = getCurrentUser()
 
 	useEffect(() => {
 		async function loadAccount() {
@@ -50,7 +52,7 @@ function Account() {
 							Account Dashboard
 						</span>
 						<h1 className="mt-4 text-3xl font-bold tracking-tight sm:text-4xl">
-							Your Membership & Limits
+							Welcome back, {user?.full_name || "Organizer"}
 						</h1>
 						<p className="mt-2 text-sm leading-6 text-orange-100">
 							Review active subscription limits, cloud storage, and attendee capacity.
@@ -74,126 +76,154 @@ function Account() {
 				)}
 
 				{!loading && !error && (
-					<div className="mt-8 grid gap-6 lg:grid-cols-2">
-						{/* Current Plan Card */}
-						<div className="rounded-[2.5rem] border border-slate-200/80 bg-white p-7 soft-shadow-lg sm:p-8">
-							<div className="flex items-center justify-between">
-								<span className="rounded-full bg-pink-50 px-3 py-1 text-xs font-bold text-[var(--brand-pink)]">
-									Active Subscription
-								</span>
-								<ShieldCheck size={20} className="text-emerald-600" />
-							</div>
-
-							{subscription ? (
-								<div className="mt-6">
-									<h2 className="text-3xl font-bold text-[var(--brand-navy)]">
-										{subscription.plan.name}
-									</h2>
-									<div className="mt-4 space-y-2 text-xs text-slate-600 sm:text-sm">
-										<p className="flex items-center gap-2">
-											<span className="font-semibold text-slate-900">Status:</span>
-											<span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-bold text-emerald-800">
-												{subscription.status}
-											</span>
-										</p>
-										<p className="flex items-center gap-2">
-											<span className="font-semibold text-slate-900">Expires:</span>
-											<span>
-												{new Date(subscription.expires_at).toLocaleDateString(undefined, {
-													month: "long",
-													day: "numeric",
-													year: "numeric",
-												})}
-											</span>
-										</p>
-									</div>
-
-									<div className="mt-8 flex gap-3">
-										<Link
-											to="/pricing"
-											className="rounded-full bg-slate-900 px-5 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-slate-800 active:scale-95"
-										>
-											Upgrade Plan
-										</Link>
-										<Link
-											to="/portal"
-											className="rounded-full bg-[var(--brand-pink)] px-5 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-[var(--brand-pink-dark)] active:scale-95"
-										>
-											Enter Portal
-										</Link>
-									</div>
-								</div>
-							) : (
-								<div className="mt-6">
-									<p className="text-sm text-slate-600">
-										You do not have an active membership plan yet.
+					<div className="mt-8 space-y-6">
+						<div className="rounded-[2.5rem] border border-slate-200/80 bg-white p-6 soft-shadow-lg sm:p-8">
+							<div className="flex items-center justify-between gap-3">
+								<div>
+									<p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">
+										Account Holder
 									</p>
-									<Link
-										to="/pricing"
-										className="mt-6 inline-flex rounded-full bg-[var(--brand-pink)] px-6 py-3 text-xs font-bold text-white shadow-md hover:bg-[var(--brand-pink-dark)] active:scale-95"
-									>
-										Choose a Plan
-									</Link>
+									<h2 className="mt-2 text-2xl font-bold text-[var(--brand-navy)]">
+										{user?.full_name || "Organizer"}
+									</h2>
 								</div>
-							)}
+								<div className="rounded-full bg-pink-50 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--brand-pink)]">
+									{user?.role || "Organizer"}
+								</div>
+							</div>
+							<div className="mt-5 grid gap-4 sm:grid-cols-2">
+								<div className="rounded-2xl bg-slate-50 p-4">
+									<p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Email</p>
+									<p className="mt-2 text-sm font-semibold text-[var(--brand-navy)] break-all">{user?.email || "Not available"}</p>
+								</div>
+								<div className="rounded-2xl bg-slate-50 p-4">
+									<p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Mobile</p>
+									<p className="mt-2 text-sm font-semibold text-[var(--brand-navy)]">{user?.mobile_number || "Not available"}</p>
+								</div>
+							</div>
 						</div>
 
-						{/* Plan Access & Quotas */}
-						<div className="rounded-[2.5rem] border border-slate-200/80 bg-white p-7 soft-shadow-lg sm:p-8">
-							<span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">
-								Features & Allocations
-							</span>
+						<div className="grid gap-6 lg:grid-cols-2">
+							{/* Current Plan Card */}
+							<div className="rounded-[2.5rem] border border-slate-200/80 bg-white p-7 soft-shadow-lg sm:p-8">
+								<div className="flex items-center justify-between">
+									<span className="rounded-full bg-pink-50 px-3 py-1 text-xs font-bold text-[var(--brand-pink)]">
+										Active Subscription
+									</span>
+									<ShieldCheck size={20} className="text-emerald-600" />
+								</div>
 
-							{usage?.has_active_plan ? (
-								<ul className="mt-6 space-y-3 text-xs text-slate-600 sm:text-sm">
-									<li className="flex items-center justify-between border-b border-slate-100 pb-2">
-										<span className="font-medium text-slate-900">Guest Capacity</span>
-										<span className="font-bold text-[var(--brand-pink)]">
-											{usage.guest_limit ?? "Unlimited"}
-										</span>
-									</li>
-									<li className="flex items-center justify-between border-b border-slate-100 pb-2">
-										<span className="font-medium text-slate-900">Total Celebrations</span>
-										<span className="font-bold text-[var(--brand-pink)]">
-											{usage.event_limit ?? "Unlimited"}
-										</span>
-									</li>
-									<li className="flex items-center justify-between border-b border-slate-100 pb-2">
-										<span className="font-medium text-slate-900">Invitation Templates</span>
-										<span className="font-bold text-[var(--brand-pink)]">
-											{usage.template_count ?? "Unlimited"}
-										</span>
-									</li>
-									<li className="flex items-center justify-between border-b border-slate-100 pb-2">
-										<span className="font-medium text-slate-900">Cloud Storage</span>
-										<span className="font-bold text-[var(--brand-pink)]">
-											{usage.storage_limit_mb ?? "Unlimited"} MB
-										</span>
-									</li>
-									<li className="flex items-center justify-between border-b border-slate-100 pb-2">
-										<span className="font-medium text-slate-900">AI Face Recognition Gallery</span>
-										<span className="font-bold text-emerald-700">
-											{usage.gallery_enabled ? "Included" : "Not included"}
-										</span>
-									</li>
-									<li className="flex items-center justify-between border-b border-slate-100 pb-2">
-										<span className="font-medium text-slate-900">QR Check-in Passes</span>
-										<span className="font-bold text-emerald-700">
-											{usage.qr_code_enabled ? "Included" : "Not included"}
-										</span>
-									</li>
-									<li className="flex items-center justify-between">
-										<span className="font-medium text-slate-900">Photographer Access</span>
-										<span className="font-bold text-emerald-700">
-											{usage.photographer_access_enabled ? "Included" : "Not included"}
-										</span>
-									</li>
-								</ul>
-							) : (
-								<p className="mt-6 text-sm text-slate-600">
-									Choose a plan to unlock full celebration tools and features.
-								</p>
-							)}
+								{subscription ? (
+									<div className="mt-6">
+										<h2 className="text-3xl font-bold text-[var(--brand-navy)]">
+											{subscription.plan.name}
+										</h2>
+										<div className="mt-4 space-y-2 text-xs text-slate-600 sm:text-sm">
+											<p className="flex items-center gap-2">
+												<span className="font-semibold text-slate-900">Status:</span>
+												<span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-bold text-emerald-800">
+													{subscription.status}
+												</span>
+											</p>
+											<p className="flex items-center gap-2">
+												<span className="font-semibold text-slate-900">Expires:</span>
+												<span>
+													{new Date(subscription.expires_at).toLocaleDateString(undefined, {
+														month: "long",
+														day: "numeric",
+														year: "numeric",
+													})}
+												</span>
+											</p>
+										</div>
+
+										<div className="mt-8 flex gap-3">
+											<Link
+												to="/pricing"
+												className="rounded-full bg-slate-900 px-5 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-slate-800 active:scale-95"
+											>
+												Upgrade Plan
+											</Link>
+											<Link
+												to="/portal"
+												className="rounded-full bg-[var(--brand-pink)] px-5 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-[var(--brand-pink-dark)] active:scale-95"
+											>
+												Enter Portal
+											</Link>
+										</div>
+									</div>
+								) : (
+									<div className="mt-6">
+										<p className="text-sm text-slate-600">
+											You do not have an active membership plan yet.
+										</p>
+										<Link
+											to="/pricing"
+											className="mt-6 inline-flex rounded-full bg-[var(--brand-pink)] px-6 py-3 text-xs font-bold text-white shadow-md hover:bg-[var(--brand-pink-dark)] active:scale-95"
+										>
+											Choose a Plan
+										</Link>
+									</div>
+								)}
+							</div>
+
+							{/* Plan Access & Quotas */}
+							<div className="rounded-[2.5rem] border border-slate-200/80 bg-white p-7 soft-shadow-lg sm:p-8">
+								<span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">
+									Features & Allocations
+								</span>
+
+								{usage?.has_active_plan ? (
+									<ul className="mt-6 space-y-3 text-xs text-slate-600 sm:text-sm">
+										<li className="flex items-center justify-between border-b border-slate-100 pb-2">
+											<span className="font-medium text-slate-900">Guest Capacity</span>
+											<span className="font-bold text-[var(--brand-pink)]">
+												{usage.guest_limit ?? "Unlimited"}
+											</span>
+										</li>
+										<li className="flex items-center justify-between border-b border-slate-100 pb-2">
+											<span className="font-medium text-slate-900">Total Celebrations</span>
+											<span className="font-bold text-[var(--brand-pink)]">
+												{usage.event_limit ?? "Unlimited"}
+											</span>
+										</li>
+										<li className="flex items-center justify-between border-b border-slate-100 pb-2">
+											<span className="font-medium text-slate-900">Invitation Templates</span>
+											<span className="font-bold text-[var(--brand-pink)]">
+												{usage.template_count ?? "Unlimited"}
+											</span>
+										</li>
+										<li className="flex items-center justify-between border-b border-slate-100 pb-2">
+											<span className="font-medium text-slate-900">Cloud Storage</span>
+											<span className="font-bold text-[var(--brand-pink)]">
+												{usage.storage_limit_mb ?? "Unlimited"} MB
+											</span>
+										</li>
+										<li className="flex items-center justify-between border-b border-slate-100 pb-2">
+											<span className="font-medium text-slate-900">AI Face Recognition Gallery</span>
+											<span className="font-bold text-emerald-700">
+												{usage.gallery_enabled ? "Included" : "Not included"}
+											</span>
+										</li>
+										<li className="flex items-center justify-between border-b border-slate-100 pb-2">
+											<span className="font-medium text-slate-900">QR Check-in Passes</span>
+											<span className="font-bold text-emerald-700">
+												{usage.qr_code_enabled ? "Included" : "Not included"}
+											</span>
+										</li>
+										<li className="flex items-center justify-between">
+											<span className="font-medium text-slate-900">Photographer Access</span>
+											<span className="font-bold text-emerald-700">
+												{usage.photographer_access_enabled ? "Included" : "Not included"}
+											</span>
+										</li>
+									</ul>
+								) : (
+									<p className="mt-6 text-sm text-slate-600">
+										Choose a plan to unlock full celebration tools and features.
+									</p>
+								)}
+							</div>
 						</div>
 					</div>
 				)}

@@ -105,14 +105,14 @@ function Pricing() {
 				const response = await changePlan(plan.slug)
 				setActiveSlug(response.data.subscription.plan.slug)
 				setNotice(`Plan ${response.data.change_type} completed successfully.`)
-				navigate("/account")
+				navigate("/portal/account")
 			} else if (Number(plan.price) === 0) {
 				const response = await subscribeToPlan(plan.slug)
 				setActiveSlug(response.data.plan.slug)
 				setNotice(response.message ?? "Subscribed successfully.")
 				const access = await getPortalAccess()
 				if (access.data.next_step === null) navigate("/portal")
-				else navigate("/account")
+				else navigate("/portal/account")
 			} else {
 				const order = await createPaymentOrder(plan.slug)
 				await loadRazorpay()
@@ -130,7 +130,7 @@ function Pricing() {
 							.then(async () => {
 								const access = await getPortalAccess()
 								if (access.data.next_step === null) navigate("/portal")
-								else navigate("/account")
+										else navigate("/portal/account")
 							})
 							.catch((paymentError) =>
 								setError(getApiErrorMessage(paymentError))
@@ -273,7 +273,7 @@ function Pricing() {
 					<p className="mt-10 text-center text-xs text-slate-600">
 						View your current subscription and limits in{" "}
 						<Link
-							to="/account"
+							to="/portal/account"
 							className="font-bold text-[var(--brand-pink)] hover:underline"
 						>
 							Account

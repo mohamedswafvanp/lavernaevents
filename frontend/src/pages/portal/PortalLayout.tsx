@@ -22,14 +22,14 @@ export default function PortalLayout() {
 
 	const handleLogout = async () => {
 		await logoutUser()
-		navigate("/login")
+		navigate("/", { replace: true })
 	}
 
 	const navLinks = [
 		{ to: "/portal", label: "Dashboard", icon: LayoutDashboard, end: true },
 		{ to: "/portal/events", label: "My Events", icon: CalendarDays, end: false },
-		{ to: "/pricing", label: "Membership", icon: Tag, end: false },
-		{ to: "/account", label: "Account", icon: User, end: false },
+		{ to: "/portal/membership", label: "Membership", icon: Tag, end: false },
+		{ to: "/portal/account", label: "Account", icon: User, end: false },
 	]
 
 	return (

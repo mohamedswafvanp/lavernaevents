@@ -44,6 +44,8 @@ function App() {
 					<Route index element={<PortalDashboard />} />
 					<Route path="events" element={<PortalEvents />} />
 					<Route path="events/:id" element={<EventDetailView />} />
+					<Route path="membership" element={<Pricing />} />
+					<Route path="account" element={<Account />} />
 				</Route>
 
 				{/* Public Website Layout & Pages */}

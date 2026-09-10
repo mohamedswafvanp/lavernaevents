@@ -28,7 +28,7 @@ export default function PortalGuard({ children }: PortalGuardProps) {
 					return
 				}
 				if (res.data.next_step === "select_plan") {
-					navigate("/pricing", { replace: true })
+					navigate("/portal/membership", { replace: true })
 					return
 				}
 				setCanAccess(true)
