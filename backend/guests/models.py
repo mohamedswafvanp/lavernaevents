@@ -30,6 +30,11 @@ class Guest(TimeStampedModel):
         max_length=20,
     )
 
+    email = models.EmailField(
+        blank=True,
+        help_text="Optional. Required only if the organizer sends this guest's invitation via email.",
+    )
+
     family_member_count = models.PositiveIntegerField(
         default=3,
         help_text="Used for expected attendance calculation.",

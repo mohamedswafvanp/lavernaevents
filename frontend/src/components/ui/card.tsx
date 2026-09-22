@@ -1,17 +1,38 @@
-import type { HTMLAttributes } from "react"
+import * as React from "react";
+import { AlertCircle } from "lucide-react";
+import { cn } from "@/lib/utils";
 
-import { cn } from "@/lib/utils"
+const Card = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement>
+>(({ className, ...props }, ref) => (
+  <div
+    ref={ref}
+    className={cn(
+      "rounded-3xl border border-slate-100 bg-white soft-shadow transition-shadow duration-200",
+      className
+    )}
+    {...props}
+  />
+));
+Card.displayName = "Card";
 
-function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
-	return <div className={cn("rounded-lg border border-slate-200 bg-white shadow-sm", className)} {...props} />
+interface FormErrorProps {
+  message?: string;
 }
 
-function CardHeader({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
-	return <div className={cn("p-6", className)} {...props} />
+function FormError({ message }: FormErrorProps) {
+  if (!message) return null;
+
+  return (
+    <p
+      className="flex items-center gap-1.5 text-sm text-rose-600"
+      role="alert"
+    >
+      <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+      {message}
+    </p>
+  );
 }
 
-function CardContent({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
-	return <div className={cn("p-6 pt-0", className)} {...props} />
-}
-
-export { Card, CardHeader, CardContent }
+export { Card, FormError };

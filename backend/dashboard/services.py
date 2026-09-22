@@ -1,6 +1,6 @@
 from django.db.models import Count, Sum
 from guests.models import Guest
-from whatsapp.models import WhatsAppLog
+from notifications.models import NotificationLog
 
 
 class DashboardError(Exception):
@@ -17,10 +17,6 @@ def get_event_dashboard_stats(event) -> dict:
 
     Expected attendance is calculated as:
         SUM(family_member_count) for guests with response_status = ACCEPTED
-
-    This matches the spec: "Expected Attendance = Accepted Guests x
-    Family Member Count", summed across all accepted guests (each
-    guest's own family_member_count, not a single multiplier).
     """
 
     guests = Guest.objects.filter(event=event)
@@ -51,10 +47,16 @@ def get_event_dashboard_stats(event) -> dict:
         or 0
     )
 
-    whatsapp_marked_sent = WhatsAppLog.objects.filter(
+    notifications_sent = NotificationLog.objects.filter(
         invitation__event=event,
-        status=WhatsAppLog.Status.MARKED_SENT,
+        status=NotificationLog.Status.SENT,
     ).count()
+
+    notifications_by_channel = dict(
+        NotificationLog.objects.filter(invitation__event=event)
+        .values_list("channel")
+        .annotate(count=Count("id"))
+    )
 
     return {
         "total_guests": total_guests,
@@ -65,7 +67,16 @@ def get_event_dashboard_stats(event) -> dict:
         "invitations_sent": invitations_sent,
         "invitations_not_sent": invitations_not_sent,
         "invitations_failed": invitations_failed,
-        "whatsapp_marked_sent": whatsapp_marked_sent,
+        "notifications_sent": notifications_sent,
+        "whatsapp_sent_count": notifications_by_channel.get(
+            NotificationLog.Channel.WHATSAPP, 0
+        ),
+        "email_sent_count": notifications_by_channel.get(
+            NotificationLog.Channel.EMAIL, 0
+        ),
+        "sms_sent_count": notifications_by_channel.get(
+            NotificationLog.Channel.SMS, 0
+        ),
         "expected_attendance": expected_attendance,
     }
 
@@ -114,11 +125,7 @@ def get_event_invitation_chart_data(event) -> list:
 
 
 def get_organizer_overview_stats(organizer) -> dict:
-    """Compute a high-level summary across ALL of the organizer's events.
-
-    Used for a top-level dashboard landing page before drilling into a
-    specific event.
-    """
+    """Compute a high-level summary across ALL of the organizer's events."""
 
     from events.models import Event
 

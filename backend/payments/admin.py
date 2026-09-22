@@ -13,7 +13,7 @@ class PaymentAdmin(admin.ModelAdmin):
         "amount",
         "currency",
         "status",
-        "razorpay_order_id",
+        "stripe_checkout_session_id",
         "created_at",
     )
 
@@ -25,8 +25,8 @@ class PaymentAdmin(admin.ModelAdmin):
     search_fields = (
         "user__mobile_number",
         "user__email",
-        "razorpay_order_id",
-        "razorpay_payment_id",
+        "stripe_checkout_session_id",
+        "stripe_payment_intent_id",
     )
 
     ordering = (
@@ -34,9 +34,8 @@ class PaymentAdmin(admin.ModelAdmin):
     )
 
     readonly_fields = (
-        "razorpay_order_id",
-        "razorpay_payment_id",
-        "razorpay_signature",
+        "stripe_checkout_session_id",
+        "stripe_payment_intent_id",
         "created_at",
         "updated_at",
     )

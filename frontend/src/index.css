@@ -52,6 +52,13 @@
   --brand-navy: #241542;
   --brand-pink: #d41472;
   --brand-pink-dark: #ae0e5d;
+
+  /* Native app safe-area insets (status bar / notch / home indicator).
+     env() resolves to 0px on the web, and to the real inset when this
+     app is wrapped with Capacitor on iOS/Android. */
+  --safe-area-inset-top: env(safe-area-inset-top, 0px);
+  --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+
     --background: oklch(1 0 0);
     --foreground: oklch(0.145 0 0);
     --card: oklch(1 0 0);
@@ -175,16 +182,64 @@
   -webkit-backdrop-filter: blur(12px);
 }
 
+/* Shadow tint uses the brand navy (#241542 -> 36,21,66) instead of flat
+   black - a subtly "branded" shadow reads as more premium than a generic
+   gray one, at the same opacity a neutral shadow would use. Palette itself
+   is unchanged; this only reuses --brand-navy as a shadow color. */
 .soft-shadow {
-  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.05), 0 2px 6px -2px rgba(0, 0, 0, 0.02);
+  box-shadow:
+    0 1px 2px -1px rgba(36, 21, 66, 0.04),
+    0 8px 24px -8px rgba(36, 21, 66, 0.08),
+    0 2px 6px -2px rgba(36, 21, 66, 0.03);
 }
 
 .soft-shadow-lg {
-  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.08), 0 4px 12px -3px rgba(0, 0, 0, 0.03);
+  box-shadow:
+    0 2px 4px -2px rgba(36, 21, 66, 0.05),
+    0 24px 48px -12px rgba(36, 21, 66, 0.12),
+    0 8px 16px -8px rgba(36, 21, 66, 0.06);
+}
+
+/* A step up from a plain Card: a faint navy-tinted border plus a subtle
+   inset top highlight (a thin light edge along the top, as if catching
+   light) on top of the same tinted shadow language as soft-shadow. Use for
+   surfaces that should read as a level more important than a default card
+   (e.g. guest profile cards), not as the default for every card. */
+.premium-card {
+  position: relative;
+  border-radius: 1.5rem;
+  border: 1px solid rgba(36, 21, 66, 0.06);
+  background: #ffffff;
+  box-shadow:
+    0 1px 0 0 rgba(255, 255, 255, 0.8) inset,
+    0 1px 2px -1px rgba(36, 21, 66, 0.04),
+    0 8px 24px -8px rgba(36, 21, 66, 0.08),
+    0 2px 6px -2px rgba(36, 21, 66, 0.03);
+}
+
+/* Opt-in micro-interaction for any card that is itself a click target
+   (wraps a link/button, or is one) - a slight lift plus a deeper shadow on
+   hover. Deliberately NOT applied to Card by default: a card that merely
+   contains clickable rows (e.g. a dashboard widget) shouldn't imply the
+   whole surface is clickable when only its rows are. */
+.card-hover-lift {
+  transition: transform 200ms ease, box-shadow 200ms ease;
+}
+
+.card-hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 2px 4px -2px rgba(36, 21, 66, 0.05),
+    0 24px 48px -12px rgba(36, 21, 66, 0.12),
+    0 8px 16px -8px rgba(36, 21, 66, 0.06);
 }
 
 @media (max-width: 639px) {
   .mobile-safe-bottom {
-    padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));
+    padding-bottom: calc(0.75rem + var(--safe-area-inset-bottom));
+  }
+
+  .mobile-safe-top {
+    padding-top: calc(0.75rem + var(--safe-area-inset-top));
   }
 }

@@ -157,15 +157,6 @@ class UserTokenRefreshSerializer(TokenRefreshSerializer):
     pass
 
 
-class UserLogoutSerializer(serializers.Serializer):
-    """Serializer for validating a refresh token during logout."""
-
-    refresh = serializers.CharField(
-        required=True,
-        write_only=True,
-    )
-
-
 class ForgotPasswordSerializer(serializers.Serializer):
     """Serializer for requesting a password reset link by email."""
 
