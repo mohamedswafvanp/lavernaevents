@@ -65,7 +65,7 @@ INSTALLED_APPS = [
     "events",
     "guests",
     "invitations",
-    "whatsapp",
+    "notifications",
     "responses",
     "gallery",
     "photographers",
@@ -211,7 +211,7 @@ CORS_ALLOW_CREDENTIALS = True
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
-        "rest_framework_simplejwt.authentication.JWTAuthentication",
+        "users.authentication.CookieJWTAuthentication",
     ),
 
     "DEFAULT_PERMISSION_CLASSES": (
@@ -255,6 +255,21 @@ SIMPLE_JWT = {
     "UPDATE_LAST_LOGIN": True,
     "BLACKLIST_AFTER_ROTATION": True,
 }
+
+# --------------------------------------------------
+# Auth Cookies
+# --------------------------------------------------
+
+AUTH_COOKIE_SECURE = config(
+    "AUTH_COOKIE_SECURE",
+    default=not DEBUG,
+    cast=bool,
+)
+
+AUTH_COOKIE_SAMESITE = config(
+    "AUTH_COOKIE_SAMESITE",
+    default="Lax",
+)
 
 # --------------------------------------------------
 # Email

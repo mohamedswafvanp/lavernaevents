@@ -12,6 +12,7 @@ class GuestSerializer(serializers.ModelSerializer):
             "id",
             "name",
             "mobile_number",
+            "email",
             "family_member_count",
             "invitation_status",
             "response_status",
@@ -62,6 +63,11 @@ class GuestSerializer(serializers.ModelSerializer):
             )
 
         return value
+
+    def validate_email(self, value: str) -> str:
+        """Normalize the guest's email, if provided."""
+
+        return value.strip().lower()
 
     def validate_family_member_count(self, value: int) -> int:
         """Ensure family member count is a sane, non-negative number."""

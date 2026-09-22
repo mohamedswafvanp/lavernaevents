@@ -79,10 +79,10 @@ REQUIRED_CSV_COLUMNS = {"name", "mobile_number"}
 def import_guests_from_csv(event, organizer, csv_file) -> dict:
     """Import guests from an uploaded CSV file.
 
-    Expected columns: name, mobile_number, family_member_count (optional).
-    Returns a summary dict of created/skipped rows with reasons.
-    Stops importing (but keeps prior successful rows) once the plan's
-    guest limit is reached.
+    Expected columns: name, mobile_number, email (optional),
+    family_member_count (optional). Returns a summary dict of
+    created/skipped rows with reasons. Stops importing (but keeps prior
+    successful rows) once the plan's guest limit is reached.
     """
 
     try:
@@ -112,6 +112,7 @@ def import_guests_from_csv(event, organizer, csv_file) -> dict:
     for row_number, row in enumerate(reader, start=2):
         name = (row.get("name") or "").strip()
         mobile_number = (row.get("mobile_number") or "").strip()
+        email = (row.get("email") or "").strip().lower()
         family_raw = (row.get("family_member_count") or "").strip()
 
         if not name or not mobile_number:
@@ -149,6 +150,7 @@ def import_guests_from_csv(event, organizer, csv_file) -> dict:
                 event=event,
                 name=name,
                 mobile_number=mobile_number,
+                email=email,
                 family_member_count=family_member_count,
             )
 
@@ -182,6 +184,7 @@ def export_guests_to_csv(event) -> str:
         [
             "name",
             "mobile_number",
+            "email",
             "family_member_count",
             "invitation_status",
             "response_status",
@@ -193,6 +196,7 @@ def export_guests_to_csv(event) -> str:
             [
                 guest.name,
                 guest.mobile_number,
+                guest.email,
                 guest.family_member_count,
                 guest.invitation_status,
                 guest.response_status,

@@ -1,36 +1,22 @@
 from common.permissions import IsOrganizer
 from events.models import Event
-from guests.models import Guest
 from memberships.utils import get_effective_plan
 from rest_framework import status
 from rest_framework.generics import ListAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.views import APIView
 
 from .models import Invitation, InvitationTemplate
-from .serializers import (
-    GenerateInvitationSerializer,
-    InvitationSerializer,
-    InvitationTemplateSerializer,
-)
-from .services import InvitationError, generate_invitation
-
-INVITATION_ERROR_STATUS_MAP = {
-    "template_not_found": status.HTTP_404_NOT_FOUND,
-    "template_not_in_plan": status.HTTP_403_FORBIDDEN,
-    "no_active_plan": status.HTTP_402_PAYMENT_REQUIRED,
-    "duplicate_invitation": status.HTTP_409_CONFLICT,
-    "render_failed": status.HTTP_500_INTERNAL_SERVER_ERROR,
-}
+from .serializers import InvitationSerializer, InvitationTemplateSerializer
 
 
 class InvitationTemplateListView(ListAPIView):
     """List invitation templates available to the requesting organizer's plan.
 
     Only templates assigned to the organizer's current active plan are
-    shown, since access is now admin-curated per plan (not a numeric
-    limit). Organizers with no active plan see an empty list.
+    shown, since access is admin-curated per plan. Organizers with no
+    active plan see an empty list. This is the "Invitation Card View"
+    section the organizer browses before picking one to send.
     """
 
     serializer_class = InvitationTemplateSerializer
@@ -69,91 +55,6 @@ def get_owned_event_or_none(pk: int, user) -> Event | None:
     """Return the event only if it exists and belongs to the requesting user."""
 
     return Event.objects.filter(pk=pk, organizer=user).first()
-
-
-class GenerateInvitationView(APIView):
-    """Generate a personalized invitation for a guest on the organizer's event."""
-
-    permission_classes = [IsAuthenticated, IsOrganizer]
-
-    def post(self, request, event_pk):
-        """Create and render an invitation for the given guest and template."""
-
-        event = get_owned_event_or_none(event_pk, request.user)
-
-        if event is None:
-            return Response(
-                {
-                    "success": False,
-                    "message": "Event not found.",
-                    "errors": {"event": ["No event found with this ID."]},
-                },
-                status=status.HTTP_404_NOT_FOUND,
-            )
-
-        serializer = GenerateInvitationSerializer(data=request.data)
-
-        if not serializer.is_valid():
-            return Response(
-                {
-                    "success": False,
-                    "message": "Invalid request.",
-                    "errors": serializer.errors,
-                },
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        guest = Guest.objects.filter(
-            pk=serializer.validated_data["guest_id"],
-            event=event,
-        ).first()
-
-        if guest is None:
-            return Response(
-                {
-                    "success": False,
-                    "message": "Guest not found on this event.",
-                    "errors": {"guest_id": ["No guest found with this ID on this event."]},
-                },
-                status=status.HTTP_404_NOT_FOUND,
-            )
-
-        try:
-            invitation = generate_invitation(
-                event=event,
-                guest=guest,
-                template_slug_or_id=serializer.validated_data["template_id"],
-                organizer=request.user,
-            )
-
-        except InvitationError as error:
-            response_status = INVITATION_ERROR_STATUS_MAP.get(
-                error.code,
-                status.HTTP_400_BAD_REQUEST,
-            )
-
-            return Response(
-                {
-                    "success": False,
-                    "message": error.message,
-                    "errors": {"invitation": [error.message]},
-                },
-                status=response_status,
-            )
-
-        response_serializer = InvitationSerializer(
-            invitation,
-            context={"request": request},
-        )
-
-        return Response(
-            {
-                "success": True,
-                "message": "Invitation generated successfully.",
-                "data": response_serializer.data,
-            },
-            status=status.HTTP_201_CREATED,
-        )
 
 
 class EventInvitationListView(ListAPIView):

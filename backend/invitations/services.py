@@ -27,10 +27,6 @@ def generate_response_token() -> str:
 def _render_invitation_image(template: InvitationTemplate, event, guest) -> ContentFile:
     """Render a personalized invitation image by overlaying event/guest text
     onto the template's background image using Pillow.
-
-    Text position is intentionally simple and fixed. A visual template
-    editor (drag-and-drop text placement) is a frontend/admin concern,
-    not part of this backend rendering step.
     """
 
     background = Image.open(template.background_image.path).convert("RGB")
@@ -70,16 +66,21 @@ def _render_invitation_image(template: InvitationTemplate, event, guest) -> Cont
     return ContentFile(buffer.read())
 
 
-def generate_invitation(event, guest, template_slug_or_id, organizer) -> Invitation:
-    """Generate a personalized invitation image for a guest using a template.
+def get_or_create_invitation(event, guest, template_id, organizer) -> Invitation:
+    """Get the existing invitation for this guest+template, or generate a new one.
+
+    Called at SEND TIME -- the organizer picks the template in the send
+    confirmation popup, and the invitation (including its image) is
+    generated on the spot if it doesn't already exist yet. If the guest
+    was already sent an invitation using this same template before
+    (e.g. a retry), the existing one is reused rather than duplicated.
 
     Raises InvitationError if the template does not exist, is inactive,
-    the organizer's plan does not include this template, or an
-    invitation for this guest+template already exists.
+    or the organizer's plan does not include it.
     """
 
     template = InvitationTemplate.objects.filter(
-        pk=template_slug_or_id,
+        pk=template_id,
         is_active=True,
     ).first()
 
@@ -95,6 +96,11 @@ def generate_invitation(event, guest, template_slug_or_id, organizer) -> Invitat
     except LimitExceededError as error:
         raise InvitationError(error.message, code=error.code)
 
+    existing = Invitation.objects.filter(guest=guest, template=template).first()
+
+    if existing is not None:
+        return existing
+
     try:
         invitation = Invitation.objects.create(
             event=event,
@@ -104,10 +110,8 @@ def generate_invitation(event, guest, template_slug_or_id, organizer) -> Invitat
         )
 
     except IntegrityError:
-        raise InvitationError(
-            "An invitation using this template has already been generated for this guest.",
-            code="duplicate_invitation",
-        )
+        invitation = Invitation.objects.get(guest=guest, template=template)
+        return invitation
 
     try:
         image_content = _render_invitation_image(template, event, guest)

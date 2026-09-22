@@ -1,7 +1,6 @@
-import razorpay
+import stripe
 from decouple import config
 from django.db import transaction
-
 from memberships.models import MembershipPlan
 from memberships.services import create_active_subscription
 
@@ -17,19 +16,14 @@ class PaymentError(Exception):
         super().__init__(message)
 
 
-def get_razorpay_client() -> razorpay.Client:
-    """Return a configured Razorpay API client."""
+def _configure_stripe() -> None:
+    """Set the Stripe API key from environment configuration."""
 
-    return razorpay.Client(
-        auth=(
-            config("RAZORPAY_KEY_ID"),
-            config("RAZORPAY_KEY_SECRET"),
-        )
-    )
+    stripe.api_key = config("STRIPE_SECRET_KEY")
 
 
-def create_payment_order(user, plan_slug: str) -> Payment:
-    """Create a Razorpay order for the given plan and store a Payment record.
+def create_checkout_session(user, plan_slug: str, success_url: str, cancel_url: str) -> Payment:
+    """Create a Stripe Checkout Session for purchasing a membership plan.
 
     Raises PaymentError if the plan does not exist or is inactive.
     """
@@ -45,99 +39,98 @@ def create_payment_order(user, plan_slug: str) -> Payment:
             code="plan_not_found",
         )
 
-    amount_in_paise = int(plan.price * 100)
+    _configure_stripe()
 
-    client = get_razorpay_client()
+    amount_in_smallest_unit = int(plan.price * 100)
 
-    razorpay_order = client.order.create(
-        {
-            "amount": amount_in_paise,
-            "currency": "INR",
-            "payment_capture": 1,
-        }
+    session = stripe.checkout.Session.create(
+        mode="payment",
+        payment_method_types=["card"],
+        line_items=[
+            {
+                "price_data": {
+                    "currency": "inr",
+                    "product_data": {"name": f"LavernaEvents - {plan.name} Plan"},
+                    "unit_amount": amount_in_smallest_unit,
+                },
+                "quantity": 1,
+            }
+        ],
+        success_url=success_url,
+        cancel_url=cancel_url,
+        client_reference_id=str(user.pk),
+        metadata={"user_id": user.pk, "plan_slug": plan.slug},
     )
 
     payment = Payment.objects.create(
         user=user,
         plan=plan,
-        razorpay_order_id=razorpay_order["id"],
+        stripe_checkout_session_id=session.id,
         amount=plan.price,
         currency="INR",
         status=Payment.Status.CREATED,
     )
 
-    return payment
+    return payment, session.url
 
 
-def verify_and_activate_payment(
-    razorpay_order_id: str,
-    razorpay_payment_id: str,
-    razorpay_signature: str,
-) -> Payment:
-    """Verify a Razorpay payment signature and activate the subscription.
+def handle_checkout_completed(session_data: dict) -> Payment:
+    """Process a Stripe checkout.session.completed webhook event.
 
-    Raises PaymentError if the payment record is not found, the signature
-    is invalid, or the payment has already been processed.
+    Raises PaymentError if the payment record is not found or has
+    already been processed. Called from the webhook view, never
+    directly from the frontend, since this is the trusted server-to-
+    server confirmation that payment actually succeeded.
     """
 
+    checkout_session_id = session_data.get("id")
+
     payment = Payment.objects.filter(
-        razorpay_order_id=razorpay_order_id
+        stripe_checkout_session_id=checkout_session_id
     ).first()
 
     if payment is None:
         raise PaymentError(
-            "Payment record not found for this order.",
+            "Payment record not found for this checkout session.",
             code="payment_not_found",
         )
 
     if payment.status == Payment.Status.PAID:
-        raise PaymentError(
-            "This payment has already been processed.",
-            code="already_paid",
-        )
-
-    client = get_razorpay_client()
-
-    try:
-        client.utility.verify_payment_signature(
-            {
-                "razorpay_order_id": razorpay_order_id,
-                "razorpay_payment_id": razorpay_payment_id,
-                "razorpay_signature": razorpay_signature,
-            }
-        )
-
-    except razorpay.errors.SignatureVerificationError:
-        payment.status = Payment.Status.FAILED
-        payment.razorpay_payment_id = razorpay_payment_id
-        payment.razorpay_signature = razorpay_signature
-        payment.save(
-            update_fields=[
-                "status",
-                "razorpay_payment_id",
-                "razorpay_signature",
-                "updated_at",
-            ]
-        )
-
-        raise PaymentError(
-            "Payment signature verification failed.",
-            code="signature_invalid",
-        )
+        return payment
 
     with transaction.atomic():
         payment.status = Payment.Status.PAID
-        payment.razorpay_payment_id = razorpay_payment_id
-        payment.razorpay_signature = razorpay_signature
+        payment.stripe_payment_intent_id = session_data.get("payment_intent", "")
         payment.save(
             update_fields=[
                 "status",
-                "razorpay_payment_id",
-                "razorpay_signature",
+                "stripe_payment_intent_id",
                 "updated_at",
             ]
         )
 
         create_active_subscription(payment.user, payment.plan)
+
+    return payment
+
+
+def get_payment_status(checkout_session_id: str, user) -> Payment:
+    """Return the payment record for a checkout session, scoped to the requesting user.
+
+    Used by the frontend to poll/confirm payment status after redirect
+    back from Stripe Checkout, since the actual activation happens via
+    webhook, not the redirect itself.
+    """
+
+    payment = Payment.objects.filter(
+        stripe_checkout_session_id=checkout_session_id,
+        user=user,
+    ).first()
+
+    if payment is None:
+        raise PaymentError(
+            "Payment record not found.",
+            code="payment_not_found",
+        )
 
     return payment

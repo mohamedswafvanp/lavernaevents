@@ -33,7 +33,7 @@ urlpatterns = [
     path("api/events/", include("events.urls")),
     path("api/", include("guests.urls")),
     path("api/", include("invitations.urls")),
-    path("api/", include("whatsapp.urls")),
+    path("api/", include("notifications.urls")),
     path("api/", include("responses.urls")),
     path("api/dashboard/", include("dashboard.urls")),
 ]

@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from django.core.mail import send_mail
 from django.utils.encoding import force_bytes
@@ -5,9 +6,10 @@ from django.utils.http import urlsafe_base64_encode
 
 from rest_framework import status
 from rest_framework.exceptions import AuthenticationFailed
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from decouple import config
@@ -18,12 +20,45 @@ from .serializers import (
     ResendOTPSerializer,
     ResetPasswordSerializer,
     UserLoginSerializer,
-    UserLogoutSerializer,
     UserRegistrationSerializer,
     UserTokenRefreshSerializer,
     VerifyMobileSerializer,
 )
 from .services import send_verification_otp, verify_otp_code
+
+
+def _set_auth_cookies(response: Response, access: str, refresh: str) -> None:
+    """Attach the access and refresh tokens to the response as httpOnly cookies."""
+
+    access_lifetime = settings.SIMPLE_JWT["ACCESS_TOKEN_LIFETIME"]
+    refresh_lifetime = settings.SIMPLE_JWT["REFRESH_TOKEN_LIFETIME"]
+
+    response.set_cookie(
+        "access_token",
+        access,
+        max_age=int(access_lifetime.total_seconds()),
+        httponly=True,
+        secure=settings.AUTH_COOKIE_SECURE,
+        samesite=settings.AUTH_COOKIE_SAMESITE,
+        path="/",
+    )
+
+    response.set_cookie(
+        "refresh_token",
+        refresh,
+        max_age=int(refresh_lifetime.total_seconds()),
+        httponly=True,
+        secure=settings.AUTH_COOKIE_SECURE,
+        samesite=settings.AUTH_COOKIE_SAMESITE,
+        path="/",
+    )
+
+
+def _clear_auth_cookies(response: Response) -> None:
+    """Remove the access and refresh token cookies from the client."""
+
+    response.delete_cookie("access_token", path="/")
+    response.delete_cookie("refresh_token", path="/")
 
 
 class UserRegistrationView(APIView):
@@ -101,18 +136,24 @@ class UserLoginView(APIView):
                 status=status.HTTP_401_UNAUTHORIZED,
             )
 
-        return Response(
+        response = Response(
             {
                 "success": True,
                 "message": "Login successful.",
                 "data": {
-                    "access": serializer.validated_data["access"],
-                    "refresh": serializer.validated_data["refresh"],
                     "user": serializer.validated_data["user"],
                 },
             },
             status=status.HTTP_200_OK,
         )
+
+        _set_auth_cookies(
+            response,
+            access=str(serializer.validated_data["access"]),
+            refresh=str(serializer.validated_data["refresh"]),
+        )
+
+        return response
 
 
 class UserTokenRefreshView(APIView):
@@ -123,8 +164,24 @@ class UserTokenRefreshView(APIView):
     def post(self, request):
         """Refresh the user's access token."""
 
+        refresh_token = request.COOKIES.get("refresh_token")
+
+        if not refresh_token:
+            return Response(
+                {
+                    "success": False,
+                    "message": "Token refresh failed.",
+                    "errors": {
+                        "refresh": [
+                            "No refresh token cookie was found."
+                        ]
+                    },
+                },
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
         serializer = UserTokenRefreshSerializer(
-            data=request.data
+            data={"refresh": refresh_token}
         )
 
         if not serializer.is_valid():
@@ -137,16 +194,28 @@ class UserTokenRefreshView(APIView):
                 status=status.HTTP_401_UNAUTHORIZED,
             )
 
-        return Response(
+        response = Response(
             {
                 "success": True,
                 "message": "Access token refreshed successfully.",
-                "data": {
-                    "access": serializer.validated_data["access"],
-                },
+                "data": {},
             },
             status=status.HTTP_200_OK,
         )
+
+        access_lifetime = settings.SIMPLE_JWT["ACCESS_TOKEN_LIFETIME"]
+
+        response.set_cookie(
+            "access_token",
+            str(serializer.validated_data["access"]),
+            max_age=int(access_lifetime.total_seconds()),
+            httponly=True,
+            secure=settings.AUTH_COOKIE_SECURE,
+            samesite=settings.AUTH_COOKIE_SAMESITE,
+            path="/",
+        )
+
+        return response
 
 
 class UserLogoutView(APIView):
@@ -155,43 +224,19 @@ class UserLogoutView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        """Blacklist the supplied refresh token."""
+        """Blacklist the refresh token found in the request cookies."""
 
-        serializer = UserLogoutSerializer(
-            data=request.data
-        )
+        refresh_token = request.COOKIES.get("refresh_token")
 
-        if not serializer.is_valid():
-            return Response(
-                {
-                    "success": False,
-                    "message": "Logout failed.",
-                    "errors": serializer.errors,
-                },
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        if refresh_token:
+            try:
+                token = RefreshToken(refresh_token)
+                token.blacklist()
 
-        refresh_token = serializer.validated_data["refresh"]
+            except TokenError:
+                pass
 
-        try:
-            token = RefreshToken(refresh_token)
-            token.blacklist()
-
-        except Exception:
-            return Response(
-                {
-                    "success": False,
-                    "message": "Invalid or expired refresh token.",
-                    "errors": {
-                        "refresh": [
-                            "The refresh token is invalid or expired."
-                        ]
-                    },
-                },
-                status=status.HTTP_401_UNAUTHORIZED,
-            )
-
-        return Response(
+        response = Response(
             {
                 "success": True,
                 "message": "Logout successful.",
@@ -199,6 +244,10 @@ class UserLogoutView(APIView):
             },
             status=status.HTTP_200_OK,
         )
+
+        _clear_auth_cookies(response)
+
+        return response
 
 
 class ForgotPasswordView(APIView):
@@ -384,6 +433,34 @@ class ResendOTPView(APIView):
                     "a new verification code has been sent."
                 ),
                 "data": {},
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+class UserMeView(APIView):
+    """Return the currently authenticated user."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        """Return the requesting user's profile."""
+
+        user = request.user
+
+        return Response(
+            {
+                "success": True,
+                "message": "Current user retrieved successfully.",
+                "data": {
+                    "id": user.id,
+                    "full_name": user.full_name,
+                    "email": user.email,
+                    "mobile_number": user.mobile_number,
+                    "role": user.role,
+                    "is_verified": user.is_verified,
+                    "is_active": user.is_active,
+                },
             },
             status=status.HTTP_200_OK,
         )

@@ -3,20 +3,10 @@ from rest_framework import serializers
 from .models import Payment
 
 
-class CreateOrderSerializer(serializers.Serializer):
-    """Serializer for validating a payment order creation request."""
+class CreateCheckoutSessionSerializer(serializers.Serializer):
+    """Serializer for validating a checkout session creation request."""
 
     plan_slug = serializers.SlugField(required=True)
-
-
-class VerifyPaymentSerializer(serializers.Serializer):
-    """Serializer for validating a Razorpay payment verification callback."""
-
-    razorpay_order_id = serializers.CharField(required=True)
-
-    razorpay_payment_id = serializers.CharField(required=True)
-
-    razorpay_signature = serializers.CharField(required=True)
 
 
 class PaymentSerializer(serializers.ModelSerializer):
@@ -32,7 +22,7 @@ class PaymentSerializer(serializers.ModelSerializer):
         fields = (
             "id",
             "plan_name",
-            "razorpay_order_id",
+            "stripe_checkout_session_id",
             "amount",
             "currency",
             "status",

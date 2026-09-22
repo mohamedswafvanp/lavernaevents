@@ -3,7 +3,7 @@ from django.db import models
 
 
 class Payment(TimeStampedModel):
-    """Tracks a Razorpay payment attempt for a membership plan purchase."""
+    """Tracks a Stripe payment attempt for a membership plan purchase."""
 
     class Status(models.TextChoices):
         CREATED = "CREATED", "Created"
@@ -22,18 +22,13 @@ class Payment(TimeStampedModel):
         related_name="payments",
     )
 
-    razorpay_order_id = models.CharField(
-        max_length=100,
+    stripe_checkout_session_id = models.CharField(
+        max_length=200,
         unique=True,
     )
 
-    razorpay_payment_id = models.CharField(
-        max_length=100,
-        blank=True,
-    )
-
-    razorpay_signature = models.CharField(
-        max_length=255,
+    stripe_payment_intent_id = models.CharField(
+        max_length=200,
         blank=True,
     )
 

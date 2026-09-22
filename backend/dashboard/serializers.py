@@ -12,7 +12,10 @@ class EventDashboardSerializer(serializers.Serializer):
     invitations_sent = serializers.IntegerField()
     invitations_not_sent = serializers.IntegerField()
     invitations_failed = serializers.IntegerField()
-    whatsapp_marked_sent = serializers.IntegerField()
+    notifications_sent = serializers.IntegerField()
+    whatsapp_sent_count = serializers.IntegerField()
+    email_sent_count = serializers.IntegerField()
+    sms_sent_count = serializers.IntegerField()
     expected_attendance = serializers.IntegerField()
 
 

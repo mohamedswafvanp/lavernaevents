@@ -1,10 +1,6 @@
 from django.urls import path
 
-from .views import (
-    EventInvitationListView,
-    GenerateInvitationView,
-    InvitationTemplateListView,
-)
+from .views import EventInvitationListView, InvitationTemplateListView
 
 
 urlpatterns = [
@@ -17,10 +13,5 @@ urlpatterns = [
         "events/<int:event_pk>/invitations/",
         EventInvitationListView.as_view(),
         name="event-invitation-list",
-    ),
-    path(
-        "events/<int:event_pk>/invitations/generate/",
-        GenerateInvitationView.as_view(),
-        name="generate-invitation",
     ),
 ]
