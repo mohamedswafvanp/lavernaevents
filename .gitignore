@@ -73,3 +73,4 @@ frontend/dist/
 
 .DS_Store
 Thumbs.db
+backend/celerybeat-schedule*

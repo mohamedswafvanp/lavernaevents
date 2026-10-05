@@ -2,6 +2,7 @@ import base64
 import io
 import re
 import secrets
+from pathlib import Path
 
 from django.core.files.base import ContentFile
 from django.db import IntegrityError
@@ -97,7 +98,13 @@ class _SafeDict(dict):
         return "{" + key + "}"
 
 
+# Fonts committed with the project (backend/invitations/fonts/) are tried
+# first, so rendering looks the same on any server - including hosts that
+# have no system fonts installed.
+_FONT_DIR = Path(__file__).resolve().parent / "fonts"
+
 _BOLD_FONT_CANDIDATES = [
+    str(_FONT_DIR / "DejaVuSans-Bold.ttf"),
     "DejaVuSans-Bold.ttf",
     "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
     "arialbd.ttf",
@@ -105,6 +112,7 @@ _BOLD_FONT_CANDIDATES = [
 ]
 
 _REGULAR_FONT_CANDIDATES = [
+    str(_FONT_DIR / "DejaVuSans.ttf"),
     "DejaVuSans.ttf",
     "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
     "arial.ttf",
@@ -162,6 +170,19 @@ def _line_height(draw, font) -> int:
     return max(1, int((bbox[3] - bbox[1]) * 1.45))
 
 
+def _open_background(template: InvitationTemplate) -> Image.Image:
+    """Open the template's background image as an RGB Pillow image.
+
+    Goes through Django's storage layer (not a filesystem path) so it
+    works for local disk and for cloud storage alike.
+    """
+
+    with template.background_image.open("rb") as background_file:
+        data = background_file.read()
+
+    return Image.open(io.BytesIO(data)).convert("RGB")
+
+
 def _compose_invitation_image(
     template: InvitationTemplate,
     context: dict,
@@ -177,7 +198,7 @@ def _compose_invitation_image(
     depending on how bright the middle of the background is.
     """
 
-    background = Image.open(template.background_image.path).convert("RGB")
+    background = _open_background(template)
 
     if max_width and background.width > max_width:
         ratio = max_width / background.width

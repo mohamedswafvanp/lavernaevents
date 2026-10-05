@@ -401,7 +401,7 @@ function FillTemplateDialog({
   useEffect(() => {
     if (!defaults) return;
     if (initial && eventId === initial.event) return;
-    setStandardValues(defaults);
+    setStandardValues({ ...defaults });
   }, [defaults, eventId, initial]);
 
   const handlePickEvent = (id: number) => {
