@@ -4,28 +4,47 @@ from guests.models import Guest
 from invitations.services import InvitationError
 from rest_framework import status
 from rest_framework.generics import ListAPIView
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .models import NotificationLog
-from .serializers import NotificationLogSerializer, SendInvitationSerializer
+from .serializers import (
+    NotificationLogSerializer,
+    SendActiveTemplateSerializer,
+    SendBulkInvitationsSerializer,
+)
 from .services import (
     NotificationError,
+    apply_voice_call_status_callback,
+    build_voice_message,
     mark_whatsapp_as_sent,
     retry_notification,
-    send_invitation,
+    send_active_template_to_guest,
+    send_bulk_invitations,
+    send_reminder_to_guest,
 )
 
 ERROR_STATUS_MAP = {
     "template_not_found": status.HTTP_404_NOT_FOUND,
-    "template_not_in_plan": status.HTTP_403_FORBIDDEN,
+    "template_missing_body": status.HTTP_400_BAD_REQUEST,
+    "invalid_placeholder": status.HTTP_400_BAD_REQUEST,
     "no_active_plan": status.HTTP_402_PAYMENT_REQUIRED,
+    "template_limit_exceeded": status.HTTP_409_CONFLICT,
     "render_failed": status.HTTP_500_INTERNAL_SERVER_ERROR,
     "missing_email": status.HTTP_400_BAD_REQUEST,
     "email_send_failed": status.HTTP_502_BAD_GATEWAY,
     "sms_send_failed": status.HTTP_502_BAD_GATEWAY,
     "invalid_channel": status.HTTP_400_BAD_REQUEST,
+    "bulk_not_supported": status.HTTP_400_BAD_REQUEST,
+    "no_active_template": status.HTTP_409_CONFLICT,
+    "active_template_wrong_event": status.HTTP_409_CONFLICT,
+    "voice_not_configured": status.HTTP_503_SERVICE_UNAVAILABLE,
+    "voice_call_failed": status.HTTP_502_BAD_GATEWAY,
+    "voice_call_limit_exceeded": status.HTTP_409_CONFLICT,
+    "voice_call_not_available": status.HTTP_409_CONFLICT,
+    "invitation_limit_exceeded": status.HTTP_409_CONFLICT,
+    "platform_pool_exhausted": status.HTTP_503_SERVICE_UNAVAILABLE,
 }
 
 
@@ -35,33 +54,56 @@ def get_owned_event_or_none(pk: int, user) -> Event | None:
     return Event.objects.filter(pk=pk, organizer=user).first()
 
 
-class SendInvitationView(APIView):
-    """The confirmation popup's send action: pick a template + channel, send now.
+def _event_not_found_response() -> Response:
+    return Response(
+        {
+            "success": False,
+            "message": "Event not found.",
+            "errors": {"event": ["No event found with this ID."]},
+        },
+        status=status.HTTP_404_NOT_FOUND,
+    )
 
-    This single endpoint backs the entire 'Send' button + popup flow:
-    generates the invitation for the chosen template if needed, then
-    dispatches it via WhatsApp (returns a link), Email, or SMS
-    (both sent directly by the backend).
+
+def _guest_not_found_response() -> Response:
+    return Response(
+        {
+            "success": False,
+            "message": "Guest not found on this event.",
+            "errors": {"guest_id": ["No guest found with this ID on this event."]},
+        },
+        status=status.HTTP_404_NOT_FOUND,
+    )
+
+
+def _send_error_response(error, key: str = "invitation") -> Response:
+    return Response(
+        {
+            "success": False,
+            "message": error.message,
+            "errors": {key: [error.message]},
+        },
+        status=ERROR_STATUS_MAP.get(error.code, status.HTTP_400_BAD_REQUEST),
+    )
+
+
+class SendInvitationView(APIView):
+    """The Guests page's single-guest Send action.
+
+    The organizer picks the channel on the Guests page before sending;
+    it arrives here as `channel` along with `guest_id`. The template
+    itself is always the organizer's one active filled template.
     """
 
     permission_classes = [IsAuthenticated, IsOrganizer]
 
     def post(self, request, event_pk):
-        """Validate the request and dispatch the invitation through the chosen channel."""
-
         event = get_owned_event_or_none(event_pk, request.user)
 
         if event is None:
-            return Response(
-                {
-                    "success": False,
-                    "message": "Event not found.",
-                    "errors": {"event": ["No event found with this ID."]},
-                },
-                status=status.HTTP_404_NOT_FOUND,
-            )
+            return _event_not_found_response()
 
-        serializer = SendInvitationSerializer(data=request.data)
+        serializer = SendActiveTemplateSerializer(data=request.data)
 
         if not serializer.is_valid():
             return Response(
@@ -79,46 +121,27 @@ class SendInvitationView(APIView):
         ).first()
 
         if guest is None:
-            return Response(
-                {
-                    "success": False,
-                    "message": "Guest not found on this event.",
-                    "errors": {"guest_id": ["No guest found with this ID on this event."]},
-                },
-                status=status.HTTP_404_NOT_FOUND,
-            )
+            return _guest_not_found_response()
 
         try:
-            log = send_invitation(
+            log = send_active_template_to_guest(
                 event=event,
                 guest=guest,
-                template_id=serializer.validated_data["template_id"],
-                channel=serializer.validated_data["channel"],
                 organizer=request.user,
+                channel=serializer.validated_data.get("channel"),
             )
 
         except (InvitationError, NotificationError) as error:
-            response_status = ERROR_STATUS_MAP.get(
-                error.code,
-                status.HTTP_400_BAD_REQUEST,
-            )
-
-            return Response(
-                {
-                    "success": False,
-                    "message": error.message,
-                    "errors": {"invitation": [error.message]},
-                },
-                status=response_status,
-            )
+            return _send_error_response(error)
 
         response_serializer = NotificationLogSerializer(log)
 
-        message = (
-            "WhatsApp link generated. Open it to send the invitation."
-            if log.channel == NotificationLog.Channel.WHATSAPP
-            else f"Invitation sent successfully via {log.channel.title()}."
-        )
+        if log.channel == NotificationLog.Channel.WHATSAPP:
+            message = "WhatsApp invitation ready."
+        elif log.channel == NotificationLog.Channel.VOICE_CALL:
+            message = "Call initiated - the guest's phone is ringing."
+        else:
+            message = f"Invitation sent successfully via {log.get_channel_display()}."
 
         return Response(
             {
@@ -130,14 +153,69 @@ class SendInvitationView(APIView):
         )
 
 
+class SendBulkInvitationsView(APIView):
+    """Send ONE BATCH of a bulk Email / SMS / Voice Call send.
+
+    The frontend calls this repeatedly, feeding back `next_after_id`
+    until `has_more` is false, which gives live progress and keeps each
+    request short. WhatsApp is deliberately not available here.
+    """
+
+    permission_classes = [IsAuthenticated, IsOrganizer]
+
+    def post(self, request, event_pk):
+        event = get_owned_event_or_none(event_pk, request.user)
+
+        if event is None:
+            return _event_not_found_response()
+
+        serializer = SendBulkInvitationsSerializer(data=request.data)
+
+        if not serializer.is_valid():
+            return Response(
+                {
+                    "success": False,
+                    "message": "Invalid request.",
+                    "errors": serializer.errors,
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        data = serializer.validated_data
+
+        try:
+            result = send_bulk_invitations(
+                event=event,
+                organizer=request.user,
+                channel=data["channel"],
+                guest_ids=data["guest_ids"],
+                category_ids=data["category_ids"],
+                include_uncategorized=data["include_uncategorized"],
+                select_all=data["select_all"],
+                skip_already_sent=data["skip_already_sent"],
+                after_id=data["after_id"],
+                batch_size=data["batch_size"],
+            )
+
+        except (InvitationError, NotificationError) as error:
+            return _send_error_response(error)
+
+        return Response(
+            {
+                "success": True,
+                "message": "Batch processed.",
+                "data": result,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
 class MarkWhatsAppSentView(APIView):
-    """Confirm that the organizer sent the WhatsApp message (no delivery webhook available)."""
+    """Confirm that the organizer sent the WhatsApp message (retry path only)."""
 
     permission_classes = [IsAuthenticated, IsOrganizer]
 
     def post(self, request, log_pk):
-        """Mark a WhatsApp notification log as sent."""
-
         log = NotificationLog.objects.filter(
             pk=log_pk,
             invitation__event__organizer=request.user,
@@ -174,8 +252,6 @@ class RetryNotificationView(APIView):
     permission_classes = [IsAuthenticated, IsOrganizer]
 
     def post(self, request, log_pk):
-        """Re-run the same channel's send handler for this log."""
-
         log = NotificationLog.objects.filter(
             pk=log_pk,
             invitation__event__organizer=request.user,
@@ -195,19 +271,7 @@ class RetryNotificationView(APIView):
             updated_log = retry_notification(log)
 
         except NotificationError as error:
-            response_status = ERROR_STATUS_MAP.get(
-                error.code,
-                status.HTTP_400_BAD_REQUEST,
-            )
-
-            return Response(
-                {
-                    "success": False,
-                    "message": error.message,
-                    "errors": {"notification": [error.message]},
-                },
-                status=response_status,
-            )
+            return _send_error_response(error, key="notification")
 
         serializer = NotificationLogSerializer(updated_log)
 
@@ -228,16 +292,12 @@ class EventNotificationLogListView(ListAPIView):
     permission_classes = [IsAuthenticated, IsOrganizer]
 
     def get_queryset(self):
-        """Return logs scoped to the organizer's own event."""
-
         return NotificationLog.objects.filter(
             invitation__event__pk=self.kwargs["event_pk"],
             invitation__event__organizer=self.request.user,
         )
 
     def list(self, request, *args, **kwargs):
-        """Return the event's notification send logs, paginated."""
-
         queryset = self.get_queryset()
 
         page = self.paginate_queryset(queryset)
@@ -255,4 +315,185 @@ class EventNotificationLogListView(ListAPIView):
                 "data": serializer.data,
             },
             status=status.HTTP_200_OK,
+        )
+
+
+# ---------------------------------------------------------------------
+# Twilio webhooks (called BY Twilio, not by our frontend)
+# ---------------------------------------------------------------------
+#
+# No session cookie / JWT is possible here, so both are AllowAny and trust
+# the unguessable log_pk in the URL - the same security model as the guest
+# response-link flow. For production hardening, verify Twilio's
+# X-Twilio-Signature header against TWILIO_AUTH_TOKEN.
+
+class VoiceTwiMLView(APIView):
+    """Return the TwiML Twilio fetches when a voice call connects."""
+
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    def post(self, request, log_pk):
+        from django.http import HttpResponse
+
+        log = NotificationLog.objects.filter(
+            pk=log_pk,
+            channel=NotificationLog.Channel.VOICE_CALL,
+        ).select_related("invitation", "invitation__event", "invitation__guest").first()
+
+        if log is None:
+            twiml = '<?xml version="1.0" encoding="UTF-8"?><Response><Say>Invitation not found.</Say></Response>'
+            return HttpResponse(twiml, content_type="text/xml", status=status.HTTP_404_NOT_FOUND)
+
+        message = build_voice_message(log.invitation)
+
+        escaped_message = (
+            message.replace("&", "&amp;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+            .replace('"', "&quot;")
+            .replace("'", "&apos;")
+        )
+
+        twiml = (
+            '<?xml version="1.0" encoding="UTF-8"?>'
+            "<Response>"
+            f'<Say voice="Polly.Kajal-Neural">{escaped_message}</Say>'
+            "</Response>"
+        )
+
+        return HttpResponse(twiml, content_type="text/xml", status=status.HTTP_200_OK)
+
+
+class TwilioCallStatusCallbackView(APIView):
+    """Receive Twilio's final call status and update the NotificationLog."""
+
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    def post(self, request, log_pk):
+        log = NotificationLog.objects.filter(
+            pk=log_pk,
+            channel=NotificationLog.Channel.VOICE_CALL,
+        ).first()
+
+        if log is None:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+        call_status = request.data.get("CallStatus", "")
+
+        apply_voice_call_status_callback(log, call_status)
+
+        return Response(status=status.HTTP_200_OK)
+
+
+# ---------------------------------------------------------------------
+# Reminders
+# ---------------------------------------------------------------------
+
+class SendReminderView(APIView):
+    """Manually trigger a reminder send right now (Email/SMS/Voice Call -
+    WhatsApp goes through SendPendingWhatsAppReminderView instead).
+
+    Without an explicit `channel`, the reminder uses the channel this
+    guest's invitation last went out on.
+    """
+
+    permission_classes = [IsAuthenticated, IsOrganizer]
+
+    def post(self, request, event_pk):
+        event = get_owned_event_or_none(event_pk, request.user)
+
+        if event is None:
+            return _event_not_found_response()
+
+        serializer = SendActiveTemplateSerializer(data=request.data)
+
+        if not serializer.is_valid():
+            return Response(
+                {
+                    "success": False,
+                    "message": "Invalid request.",
+                    "errors": serializer.errors,
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        guest = Guest.objects.filter(
+            pk=serializer.validated_data["guest_id"],
+            event=event,
+        ).first()
+
+        if guest is None:
+            return _guest_not_found_response()
+
+        try:
+            log = send_reminder_to_guest(
+                event=event,
+                guest=guest,
+                organizer=request.user,
+                channel=serializer.validated_data.get("channel"),
+            )
+
+        except (InvitationError, NotificationError) as error:
+            return _send_error_response(error)
+
+        response_serializer = NotificationLogSerializer(log)
+
+        return Response(
+            {
+                "success": True,
+                "message": "Reminder sent.",
+                "data": response_serializer.data,
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class SendPendingWhatsAppReminderView(APIView):
+    """One-click send a queued WhatsApp reminder, then clear it from the
+    pending list."""
+
+    permission_classes = [IsAuthenticated, IsOrganizer]
+
+    def post(self, request, pending_pk):
+        from invitations.models import PendingWhatsAppReminder
+
+        pending = PendingWhatsAppReminder.objects.filter(
+            pk=pending_pk,
+            event__organizer=request.user,
+        ).select_related("event", "guest").first()
+
+        if pending is None:
+            return Response(
+                {
+                    "success": False,
+                    "message": "Pending reminder not found.",
+                    "errors": {"reminder": ["No pending reminder found with this ID."]},
+                },
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        try:
+            log = send_reminder_to_guest(
+                event=pending.event,
+                guest=pending.guest,
+                organizer=request.user,
+                channel=NotificationLog.Channel.WHATSAPP,
+            )
+
+        except (InvitationError, NotificationError) as error:
+            return _send_error_response(error)
+
+        pending.delete()
+
+        response_serializer = NotificationLogSerializer(log)
+
+        return Response(
+            {
+                "success": True,
+                "message": "Reminder sent via WhatsApp.",
+                "data": response_serializer.data,
+            },
+            status=status.HTTP_201_CREATED,
         )

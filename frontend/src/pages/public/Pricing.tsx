@@ -1,9 +1,5 @@
-import { useIsDesktop } from "@/hooks/useMediaQuery";
-import PricingGridDesktop from "@/components/membership/desktop/PricingGridDesktop";
-import PricingGridMobile from "@/components/membership/mobile/PricingGridMobile";
+import PricingGrid from "@/components/membership/PricingGrid";
 
 export default function Pricing() {
-  const isDesktop = useIsDesktop();
-
-  return isDesktop ? <PricingGridDesktop /> : <PricingGridMobile />;
+  return <PricingGrid />;
 }

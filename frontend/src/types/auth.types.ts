@@ -16,6 +16,10 @@ export interface RegisterPayload {
   mobile_number: string;
   password: string;
   password_confirm: string;
+  // Optional - backend defaults to ORGANIZER when omitted. Only
+  // ORGANIZER and PHOTOGRAPHER may be self-selected at registration
+  // (ADMIN/GUEST are rejected server-side).
+  role?: "ORGANIZER" | "PHOTOGRAPHER";
 }
 
 export interface LoginPayload {

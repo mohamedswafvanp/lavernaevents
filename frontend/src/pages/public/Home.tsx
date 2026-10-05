@@ -80,8 +80,11 @@ export default function Home() {
             animate="show"
             className="overflow-hidden rounded-[2rem] bg-white soft-shadow-lg"
           >
-            <div className="gradient-hero-warm relative flex flex-col items-center px-6 py-16 text-center text-white sm:px-12 sm:py-24">
-              <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-white/10" />
+            <div
+              className="relative flex flex-col items-center px-6 py-16 text-center text-white sm:px-12 sm:py-24"
+              style={{ background: "var(--gradient-brand)" }}
+            >
+              <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-[var(--brand-green)]/15" />
               <div className="absolute -bottom-24 -left-16 h-72 w-72 rounded-full bg-white/10" />
 
               <div className="relative z-10 rounded-2xl bg-white/90 p-3">
@@ -121,12 +124,7 @@ export default function Home() {
 
       <section className="px-4 py-16 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-6xl">
-          <motion.div
-            variants={fadeUp}
-            initial="hidden"
-            whileInView="show"
-            viewport={{ once: true, margin: "-80px" }}
-          >
+          <motion.div variants={fadeUp} initial="hidden" whileInView="show" viewport={{ once: true, margin: "-80px" }}>
             <h2 className="text-xl font-bold text-[var(--brand-navy)] sm:text-2xl">
               Everything you need, in one place
             </h2>
@@ -140,9 +138,7 @@ export default function Home() {
                   <span className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--brand-pink)]/10 text-[var(--brand-pink)]">
                     <action.icon className="h-5 w-5" />
                   </span>
-                  <span className="text-xs font-medium text-slate-600 sm:text-sm">
-                    {action.label}
-                  </span>
+                  <span className="text-xs font-medium text-slate-600 sm:text-sm">{action.label}</span>
                 </Link>
               ))}
             </div>
@@ -152,12 +148,7 @@ export default function Home() {
 
       <section className="px-4 py-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-6xl">
-          <motion.div
-            variants={fadeUp}
-            initial="hidden"
-            whileInView="show"
-            viewport={{ once: true, margin: "-80px" }}
-          >
+          <motion.div variants={fadeUp} initial="hidden" whileInView="show" viewport={{ once: true, margin: "-80px" }}>
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-bold text-[var(--brand-navy)] sm:text-2xl">
                 Built for every kind of celebration
@@ -168,12 +159,20 @@ export default function Home() {
             </div>
 
             <div className="no-scrollbar mt-6 flex gap-4 overflow-x-auto pb-2">
-              {EVENT_TYPES.map((eventType) => (
+              {EVENT_TYPES.map((eventType, index) => (
                 <div
                   key={eventType.title}
                   className="min-w-[240px] overflow-hidden rounded-3xl border border-slate-100 bg-white soft-shadow"
                 >
-                  <div className="gradient-hero-warm h-32" />
+                  <div
+                    className="h-32"
+                    style={{
+                      background:
+                        index % 2 === 0
+                          ? "var(--gradient-brand)"
+                          : "linear-gradient(135deg, var(--brand-pink) 0%, var(--brand-green-dark) 100%)",
+                    }}
+                  />
                   <div className="p-4">
                     <p className="text-sm font-semibold text-[var(--brand-navy)]">{eventType.title}</p>
                     <p className="mt-1 text-xs text-slate-500">{eventType.description}</p>
@@ -192,9 +191,10 @@ export default function Home() {
             initial="hidden"
             whileInView="show"
             viewport={{ once: true, margin: "-80px" }}
-            className="gradient-ecard-warm relative overflow-hidden rounded-[2rem] p-8 text-white sm:p-10"
+            className="relative overflow-hidden rounded-[2rem] p-8 text-white sm:p-10"
+            style={{ background: "linear-gradient(135deg, var(--brand-pink) 0%, var(--brand-pink-dark) 100%)" }}
           >
-            <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/10" />
+            <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-[var(--brand-gold)]/20" />
             <Sparkles className="h-8 w-8" />
             <h3 className="mt-4 text-2xl font-bold">Digital invitations</h3>
             <p className="mt-3 max-w-sm text-white/85">
@@ -209,27 +209,17 @@ export default function Home() {
             </Link>
           </motion.div>
 
-          <motion.div
-            variants={fadeUp}
-            initial="hidden"
-            whileInView="show"
-            viewport={{ once: true, margin: "-80px" }}
-          >
+          <motion.div variants={fadeUp} initial="hidden" whileInView="show" viewport={{ once: true, margin: "-80px" }}>
             <Card className="flex h-full flex-col justify-center p-8 sm:p-10">
-              <span className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--brand-navy)]/10 text-[var(--brand-navy)]">
+              <span className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--brand-green)]/10 text-[var(--brand-green-dark)]">
                 <ClipboardCheck className="h-5 w-5" />
               </span>
-              <h3 className="mt-4 text-2xl font-bold text-[var(--brand-navy)]">
-                Guest RSVP tracking
-              </h3>
+              <h3 className="mt-4 text-2xl font-bold text-[var(--brand-navy)]">Guest RSVP tracking</h3>
               <p className="mt-3 text-slate-500">
                 See who's coming at a glance, follow up with guests who haven't responded, and
                 keep your final headcount accurate.
               </p>
-              <Link
-                to={primaryHref}
-                className={cn(buttonVariants({ variant: "primary", size: "sm" }), "mt-6 w-fit")}
-              >
+              <Link to={primaryHref} className={cn(buttonVariants({ variant: "primary", size: "sm" }), "mt-6 w-fit")}>
                 {user ? "Open portal" : "Get started"}
               </Link>
             </Card>
@@ -239,15 +229,8 @@ export default function Home() {
 
       <section className="px-4 py-16 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-6xl">
-          <motion.div
-            variants={fadeUp}
-            initial="hidden"
-            whileInView="show"
-            viewport={{ once: true, margin: "-80px" }}
-          >
-            <h2 className="text-xl font-bold text-[var(--brand-navy)] sm:text-2xl">
-              Core features
-            </h2>
+          <motion.div variants={fadeUp} initial="hidden" whileInView="show" viewport={{ once: true, margin: "-80px" }}>
+            <h2 className="text-xl font-bold text-[var(--brand-navy)] sm:text-2xl">Core features</h2>
             <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {CORE_FEATURES.map((feature) => (
                 <Card key={feature.title} className="p-6">
@@ -270,9 +253,10 @@ export default function Home() {
             initial="hidden"
             whileInView="show"
             viewport={{ once: true, margin: "-80px" }}
-            className="gradient-hero-warm relative overflow-hidden rounded-[2rem] px-6 py-14 text-center text-white sm:px-12 sm:py-20"
+            className="relative overflow-hidden rounded-[2rem] px-6 py-14 text-center text-white sm:px-12 sm:py-20"
+            style={{ background: "var(--gradient-brand)" }}
           >
-            <div className="absolute -left-16 -top-16 h-56 w-56 rounded-full bg-white/10" />
+            <div className="absolute -left-16 -top-16 h-56 w-56 rounded-full bg-[var(--brand-gold)]/15" />
             <div className="absolute -bottom-20 -right-10 h-64 w-64 rounded-full bg-white/10" />
 
             <h2 className="relative z-10 text-2xl font-bold sm:text-3xl">

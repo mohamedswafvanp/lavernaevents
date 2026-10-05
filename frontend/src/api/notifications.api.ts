@@ -1,24 +1,31 @@
 import { apiClient } from "./client";
 import type { ApiResponse, PaginatedResponse, PaginationMeta } from "@/types/api.types";
-import type { NotificationLog, SendInvitationPayload } from "@/types/notification.types";
-
-// NOTE: same URL-mounting pattern found in every prior phase - notifications
-// urls.py is mounted at bare "api/" in config/urls.py, NOT "api/notifications/".
-// Confirmed by reading config/urls.py + notifications/urls.py directly: the
-// real paths are /api/events/<id>/send-invitation/,
-// /api/notification-logs/<id>/mark-whatsapp-sent/,
-// /api/notification-logs/<id>/retry/, and
-// /api/events/<id>/notification-logs/.
-//
-// Every function uses the shared apiClient (withCredentials: true baked
-// into the instance) - never a separate axios instance or bare fetch.
+import type {
+  BulkSendBatchResult,
+  BulkSendPayload,
+  NotificationLog,
+  SendActiveTemplatePayload,
+} from "@/types/notification.types";
 
 export async function sendInvitation(
   eventId: number,
-  payload: SendInvitationPayload
+  payload: SendActiveTemplatePayload
 ): Promise<NotificationLog> {
   const { data } = await apiClient.post<ApiResponse<NotificationLog>>(
     `/events/${eventId}/send-invitation/`,
+    payload
+  );
+
+  return data.data;
+}
+
+/** Sends ONE batch of a bulk Email / SMS / Voice Call send. */
+export async function sendBulkInvitationBatch(
+  eventId: number,
+  payload: BulkSendPayload
+): Promise<BulkSendBatchResult> {
+  const { data } = await apiClient.post<ApiResponse<BulkSendBatchResult>>(
+    `/events/${eventId}/send-invitations/bulk/`,
     payload
   );
 
@@ -56,4 +63,28 @@ export async function getEventNotificationLogs(
   );
 
   return { logs: data.data, pagination: data.pagination };
+}
+
+// --------------------------------------------------
+// Reminders (Phase 22)
+// --------------------------------------------------
+
+export async function sendReminder(
+  eventId: number,
+  payload: SendActiveTemplatePayload
+): Promise<NotificationLog> {
+  const { data } = await apiClient.post<ApiResponse<NotificationLog>>(
+    `/events/${eventId}/send-reminder/`,
+    payload
+  );
+
+  return data.data;
+}
+
+export async function sendPendingWhatsAppReminder(pendingId: number): Promise<NotificationLog> {
+  const { data } = await apiClient.post<ApiResponse<NotificationLog>>(
+    `/pending-whatsapp-reminders/${pendingId}/send/`
+  );
+
+  return data.data;
 }

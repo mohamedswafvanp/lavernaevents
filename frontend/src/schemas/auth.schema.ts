@@ -13,6 +13,7 @@ export const registerSchema = z
       .regex(/^\d{10,15}$/, "Mobile number must be 10-15 digits."),
     password: z.string().min(8, "Password must be at least 8 characters."),
     password_confirm: z.string().min(8, "Please confirm your password."),
+    role: z.enum(["ORGANIZER", "PHOTOGRAPHER"]),
   })
   .refine((data) => data.password === data.password_confirm, {
     message: "Passwords do not match.",

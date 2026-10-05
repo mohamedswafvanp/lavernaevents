@@ -3,6 +3,7 @@ from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from rest_framework import serializers
+from rest_framework.exceptions import AuthenticationFailed
 from rest_framework_simplejwt.serializers import (
     TokenObtainPairSerializer,
     TokenRefreshSerializer,
@@ -27,6 +28,22 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         style={"input_type": "password"},
     )
 
+    # Optional at registration - defaults to ORGANIZER (the model field's
+    # own default) when omitted, so every existing caller of this endpoint
+    # keeps working unchanged. Deliberately restricted to ORGANIZER and
+    # PHOTOGRAPHER only: ADMIN accounts are never self-service (created via
+    # Django admin/createsuperuser only), and GUEST is not a login-capable
+    # role in this app (guests interact only through their response_token
+    # link, never through /auth/register/).
+    role = serializers.ChoiceField(
+        choices=[
+            (User.Role.ORGANIZER, User.Role.ORGANIZER.label),
+            (User.Role.PHOTOGRAPHER, User.Role.PHOTOGRAPHER.label),
+        ],
+        required=False,
+        default=User.Role.ORGANIZER,
+    )
+
     class Meta:
         model = User
         fields = (
@@ -35,6 +52,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             "mobile_number",
             "password",
             "password_confirm",
+            "role",
         )
 
     def validate_full_name(self, value: str) -> str:
@@ -132,11 +150,25 @@ class UserLoginSerializer(TokenObtainPairSerializer):
     username_field = "mobile_number"
 
     def validate(self, attrs: dict) -> dict:
-        """Validate credentials and generate JWT tokens."""
+        """Validate credentials and generate JWT tokens.
+
+        Phase 14 (Admin Portal): a user suspended by an admin must be
+        fully blocked from logging in, even with correct credentials.
+        This check runs AFTER super().validate() succeeds (so password
+        is already confirmed correct) but BEFORE any token data is
+        attached to the response, matching the "fully blocked from
+        login" decision for suspended accounts.
+        """
 
         data = super().validate(attrs)
 
         user = self.user
+
+        if user.is_suspended:
+            raise AuthenticationFailed(
+                "Your account has been suspended. Please contact support.",
+                code="account_suspended",
+            )
 
         data["user"] = {
             "id": user.id,
@@ -285,3 +317,12 @@ class ResendOTPSerializer(serializers.Serializer):
         """Normalize the mobile number."""
 
         return value.strip()
+
+
+class UserLogoutSerializer(serializers.Serializer):
+    """Serializer for validating a refresh token during logout."""
+
+    refresh = serializers.CharField(
+        required=True,
+        write_only=True,
+    )

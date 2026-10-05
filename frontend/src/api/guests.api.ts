@@ -1,18 +1,16 @@
 import { apiClient } from "./client";
 import type { ApiResponse, PaginatedResponse, PaginationMeta } from "@/types/api.types";
-
-// NOTE: guests.urls is mounted at bare "api/" in config/urls.py
-// (path("api/", include("guests.urls"))), NOT "api/guests/" - the
-// "/guests" segment only exists inside guests/urls.py's own path()
-// patterns (e.g. "events/<event_pk>/guests/"). Confirmed live: a request
-// to /api/guests/events/<id>/guests/ 404s; the real path is
-// /api/events/<id>/guests/. Every URL below reflects that.
 import type {
+  ContactImportPayload,
+  ContactImportResult,
+  CreateGuestCategoryPayload,
   CreateGuestPayload,
   CSVImportResult,
   Guest,
+  GuestCategory,
   InvitationStatus,
   ResponseStatus,
+  UpdateGuestCategoryPayload,
   UpdateGuestPayload,
 } from "@/types/guest.types";
 
@@ -21,6 +19,7 @@ export interface GuestsQueryParams {
   search?: string;
   response_status?: ResponseStatus;
   invitation_status?: InvitationStatus;
+  category?: number;
 }
 
 export interface GuestsPage {
@@ -79,13 +78,18 @@ export async function deleteGuest(eventId: number, guestId: number): Promise<voi
   );
 }
 
-export async function importGuestsCsv(eventId: number, file: File): Promise<CSVImportResult> {
+export async function importGuestsCsv(
+  eventId: number,
+  file: File,
+  categoryId?: number
+): Promise<CSVImportResult> {
   const formData = new FormData();
   formData.append("file", file);
 
-  // See api/events.api.ts's MULTIPART_CONFIG comment: apiClient's instance
-  // default Content-Type must be explicitly cleared per-request, or axios
-  // will JSON.stringify() this FormData instead of sending it as multipart.
+  if (categoryId) {
+    formData.append("category_id", String(categoryId));
+  }
+
   const { data } = await apiClient.post<ApiResponse<CSVImportResult>>(
     `/events/${eventId}/guests/import-csv/`,
     formData,
@@ -95,9 +99,6 @@ export async function importGuestsCsv(eventId: number, file: File): Promise<CSVI
   return data.data;
 }
 
-// The export endpoint returns raw CSV (Content-Disposition: attachment),
-// not the standard {success, message, data} envelope - so this isn't a
-// typed JSON call, it's a blob download triggered as a side effect.
 export async function exportGuestsCsv(eventId: number): Promise<void> {
   const response = await apiClient.get(`/events/${eventId}/guests/export-csv/`, {
     responseType: "blob",
@@ -114,4 +115,59 @@ export async function exportGuestsCsv(eventId: number): Promise<void> {
   document.body.removeChild(link);
 
   URL.revokeObjectURL(url);
+}
+
+export async function importGuestsFromContacts(
+  eventId: number,
+  payload: ContactImportPayload
+): Promise<ContactImportResult> {
+  const { data } = await apiClient.post<ApiResponse<ContactImportResult>>(
+    `/events/${eventId}/guests/import-contacts/`,
+    payload
+  );
+
+  return data.data;
+}
+
+// ---------------------------------------------------------------------------
+// Guest Categories (Phase 15)
+// ---------------------------------------------------------------------------
+
+export async function getGuestCategories(eventId: number): Promise<GuestCategory[]> {
+  const { data } = await apiClient.get<ApiResponse<GuestCategory[]>>(
+    `/events/${eventId}/guest-categories/`
+  );
+
+  return data.data;
+}
+
+export async function createGuestCategory(
+  eventId: number,
+  payload: CreateGuestCategoryPayload
+): Promise<GuestCategory> {
+  const { data } = await apiClient.post<ApiResponse<GuestCategory>>(
+    `/events/${eventId}/guest-categories/`,
+    payload
+  );
+
+  return data.data;
+}
+
+export async function updateGuestCategory(
+  eventId: number,
+  categoryId: number,
+  payload: UpdateGuestCategoryPayload
+): Promise<GuestCategory> {
+  const { data } = await apiClient.patch<ApiResponse<GuestCategory>>(
+    `/events/${eventId}/guest-categories/${categoryId}/`,
+    payload
+  );
+
+  return data.data;
+}
+
+export async function deleteGuestCategory(eventId: number, categoryId: number): Promise<void> {
+  await apiClient.delete<ApiResponse<Record<string, never>>>(
+    `/events/${eventId}/guest-categories/${categoryId}/`
+  );
 }

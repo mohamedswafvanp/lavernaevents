@@ -33,3 +33,47 @@ class OrganizerOverviewSerializer(serializers.Serializer):
     total_guests = serializers.IntegerField()
     total_accepted = serializers.IntegerField()
     total_expected_attendance = serializers.IntegerField()
+
+
+# ---------------------------------------------------------------------
+# Phase 25: invitation-focused dashboard overhaul
+# ---------------------------------------------------------------------
+
+class ChannelTotalsSerializer(serializers.Serializer):
+    sent = serializers.IntegerField()
+    failed = serializers.IntegerField()
+
+
+class EventNeedingAttentionSerializer(serializers.Serializer):
+    event_id = serializers.IntegerField()
+    event_name = serializers.CharField()
+    event_date = serializers.DateField()
+    total_guests = serializers.IntegerField()
+    pending_count = serializers.IntegerField()
+    pending_rate = serializers.FloatField()
+    pending_whatsapp_reminders = serializers.IntegerField()
+
+
+class QuotaUsageSerializer(serializers.Serializer):
+    plan_name = serializers.CharField()
+    invitations_used = serializers.IntegerField()
+    invitations_total = serializers.IntegerField(allow_null=True)
+    invitations_remaining = serializers.IntegerField(allow_null=True)
+    voice_calls_used = serializers.IntegerField()
+    voice_calls_total = serializers.IntegerField(allow_null=True)
+    voice_calls_remaining = serializers.IntegerField(allow_null=True)
+    expires_at = serializers.DateTimeField()
+
+
+class OrganizerInvitationOverviewSerializer(serializers.Serializer):
+    """Serializer for the Phase 25 full dashboard payload."""
+
+    total_events = serializers.IntegerField()
+    total_guests = serializers.IntegerField()
+    total_accepted = serializers.IntegerField()
+    total_expected_attendance = serializers.IntegerField()
+    pending_whatsapp_reminders = serializers.IntegerField()
+    channel_performance = serializers.DictField(child=ChannelTotalsSerializer())
+    events_needing_attention = EventNeedingAttentionSerializer(many=True)
+    quota_usage = QuotaUsageSerializer(allow_null=True)
+    generated_at = serializers.DateTimeField()

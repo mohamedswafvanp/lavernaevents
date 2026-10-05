@@ -2,6 +2,45 @@ from common.models import TimeStampedModel
 from django.db import models
 
 
+class GuestCategory(TimeStampedModel):
+    """An organizer-defined grouping of guests within one event.
+
+    Phase 15: created per event, not platform-wide - different events
+    (weddings, birthdays, corporate functions) naturally want different
+    category sets. A helper (see guests/services.py) seeds a sensible
+    default set (Family, Friends, Relatives, Special Guest, VIP) on
+    event creation, which the organizer can then rename, reorder, add
+    to, or delete freely.
+    """
+
+    event = models.ForeignKey(
+        "events.Event",
+        on_delete=models.CASCADE,
+        related_name="guest_categories",
+    )
+
+    name = models.CharField(
+        max_length=80,
+    )
+
+    display_order = models.PositiveIntegerField(
+        default=0,
+    )
+
+    class Meta:
+        db_table = "guest_categories"
+        ordering = ["display_order", "name"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["event", "name"],
+                name="unique_category_name_per_event",
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.name} ({self.event.name})"
+
+
 class Guest(TimeStampedModel):
     """A guest invited to a specific event."""
 
@@ -19,6 +58,17 @@ class Guest(TimeStampedModel):
     event = models.ForeignKey(
         "events.Event",
         on_delete=models.CASCADE,
+        related_name="guests",
+    )
+
+    # Phase 15. Nullable: a guest can exist uncategorized (e.g. imported
+    # in bulk before sorting) and SET_NULL so deleting a category never
+    # deletes the guests in it - they just become uncategorized again.
+    category = models.ForeignKey(
+        GuestCategory,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
         related_name="guests",
     )
 
@@ -40,6 +90,13 @@ class Guest(TimeStampedModel):
         help_text="Used for expected attendance calculation.",
     )
 
+    # Phase 15: this stays as a cheap overall summary ("has at least one
+    # channel successfully delivered this guest an invitation yet"),
+    # updated automatically by invitations/services.py whenever an
+    # InvitationSend succeeds. The detailed per-channel, per-attempt
+    # history lives in InvitationSend (see invitations/models.py) -
+    # this field is intentionally NOT the source of truth for reports
+    # or reminders, just a fast summary for guest list/filter UI.
     invitation_status = models.CharField(
         max_length=20,
         choices=InvitationStatus.choices,

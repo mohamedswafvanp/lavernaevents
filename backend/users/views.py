@@ -135,6 +135,28 @@ class UserLoginView(APIView):
                 },
                 status=status.HTTP_401_UNAUTHORIZED,
             )
+        except serializers.ValidationError as error:
+            # Raised by UserLoginSerializer.validate() for a suspended
+            # account. DRF's ValidationError.detail can be a list, dict,
+            # or ErrorDetail depending on how it was raised - normalizing
+            # to a flat string keeps this response shape consistent with
+            # every other error response in the app.
+            detail = error.detail
+            if isinstance(detail, list):
+                message = str(detail[0])
+            elif isinstance(detail, dict):
+                message = str(next(iter(detail.values()))[0])
+            else:
+                message = str(detail)
+
+            return Response(
+                {
+                    "success": False,
+                    "message": message,
+                    "errors": {"account": [message]},
+                },
+                status=status.HTTP_403_FORBIDDEN,
+            )
 
         response = Response(
             {

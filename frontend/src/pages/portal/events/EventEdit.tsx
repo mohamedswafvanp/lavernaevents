@@ -1,8 +1,6 @@
 import { Link, useParams } from "react-router-dom";
-import { useIsDesktop } from "@/hooks/useMediaQuery";
 import { useEvent } from "@/queries/useEventQueries";
-import EventFormDesktop from "@/components/events/desktop/EventFormDesktop";
-import EventFormMobile from "@/components/events/mobile/EventFormMobile";
+import EventForm from "@/components/events/EventForm";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
@@ -10,7 +8,6 @@ import { buttonVariants } from "@/components/ui/button";
 export default function EventEdit() {
   const { id } = useParams<{ id: string }>();
   const eventId = id ? Number(id) : undefined;
-  const isDesktop = useIsDesktop();
 
   const { data: event, isLoading, isError } = useEvent(eventId);
 
@@ -36,10 +33,7 @@ export default function EventEdit() {
           <p className="text-sm text-slate-500">
             This event couldn't be found, or you don't have access to it.
           </p>
-          <Link
-            to="/portal/events"
-            className={buttonVariants({ variant: "outline", className: "mt-6" })}
-          >
+          <Link to="/portal/events" className={buttonVariants({ variant: "outline", className: "mt-6" })}>
             Back to events
           </Link>
         </Card>
@@ -47,9 +41,5 @@ export default function EventEdit() {
     );
   }
 
-  return isDesktop ? (
-    <EventFormDesktop existingEvent={event} />
-  ) : (
-    <EventFormMobile existingEvent={event} />
-  );
+  return <EventForm existingEvent={event} />;
 }

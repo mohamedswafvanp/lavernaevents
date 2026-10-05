@@ -49,9 +49,36 @@
 }
 
 :root {
+
+  --brand-green: #22a866;
+  --brand-green-dark: #157a48;
+  --brand-gold: #eab308;
+
+  --gradient-brand: linear-gradient(135deg, var(--brand-navy) 0%, #4a1f6b 45%, var(--brand-pink) 100%);
+  --gradient-brand-soft: linear-gradient(135deg, rgba(36, 21, 66, 0.08) 0%, rgba(212, 20, 114, 0.08) 100%);
+  --surface-muted: #f8f7fb;
+  /* Core brand - values unchanged from before, only expanded with new tokens */
   --brand-navy: #241542;
+  --brand-navy-light: #3a2266;
+  --brand-navy-dark: #160c2b;
   --brand-pink: #d41472;
+  --brand-pink-light: #ec4899;
   --brand-pink-dark: #ae0e5d;
+  --brand-green: #4caf37;
+  --brand-green-light: #7cc94a;
+  --brand-green-dark: #3a8a29;
+  --brand-gold: #f0b429;
+
+  --surface: #ffffff;
+  --surface-muted: #faf9fc;
+  --border-subtle: #ece8f2;
+
+  --success: var(--brand-green);
+  --danger: #dc2626;
+  --warning: var(--brand-gold);
+
+  --gradient-brand: linear-gradient(135deg, var(--brand-navy) 0%, var(--brand-pink-dark) 100%);
+  --gradient-brand-soft: linear-gradient(135deg, rgba(36,21,66,0.06) 0%, rgba(212,20,114,0.06) 100%);
 
   /* Native app safe-area insets (status bar / notch / home indicator).
      env() resolves to 0px on the web, and to the real inset when this
@@ -241,5 +268,14 @@
 
   .mobile-safe-top {
     padding-top: calc(0.75rem + var(--safe-area-inset-top));
+  }
+  .badge-success {
+    background: color-mix(in oklab, var(--brand-green) 12%, white);
+    color: var(--brand-green-dark);
+  }
+  
+  .badge-gold {
+    background: color-mix(in oklab, var(--brand-gold) 16%, white);
+    color: #8a5c0a;
   }
 }

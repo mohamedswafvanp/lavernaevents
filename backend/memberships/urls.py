@@ -8,6 +8,7 @@ from .views import (
     MyUsageView,
     PortalAccessView,
     SubscribeView,
+    TopupPackListView,
 )
 
 
@@ -19,4 +20,7 @@ urlpatterns = [
     path("my-subscription/", MySubscriptionView.as_view(), name="my-subscription"),
     path("my-usage/", MyUsageView.as_view(), name="my-usage"),
     path("portal-access/", PortalAccessView.as_view(), name="portal-access"),
+
+    # Phase 26: organizer topup packs
+    path("topup-packs/", TopupPackListView.as_view(), name="topup-pack-list"),
 ]

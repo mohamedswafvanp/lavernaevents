@@ -4,9 +4,7 @@ import { useAuthStore } from "@/stores/auth.store";
 import { useIsDesktop } from "@/hooks/useMediaQuery";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card } from "@/components/ui/card";
-import PortalSidebar from "@/components/portal/desktop/PortalSidebar";
-import PortalTopBar from "@/components/portal/mobile/PortalTopBar";
-import BottomNav from "@/components/portal/BottomNav";
+import { PortalBottomNav, PortalSidebar, PortalTopBar } from "@/components/portal/PortalNav";
 import { Toaster } from "@/components/ui/toaster";
 
 function PortalLayoutSkeleton() {
@@ -28,21 +26,37 @@ function PortalLayoutSkeleton() {
   );
 }
 
-// The authenticated app shell - a completely different navigation paradigm
-// (sidebar on desktop, bottom tab bar on mobile) from PublicLayout's
-// marketing Navbar/Footer, and the two must never render together. This
-// component is only ever reached via App.tsx's /portal route, which is a
-// sibling of PublicLayout's route group, not nested inside it.
-//
-// Also owns the portal-access gate (formerly a separate PortalGate page):
-// nothing under here - including every future Events/Guests/Dashboard page -
-// renders until GET /portal-access/ confirms the user is both verified and
-// subscribed. That check happens once here, at the layout level, so no
-// individual portal page ever has to repeat it.
+// The authenticated app shell - sidebar on desktop, top bar + bottom tabs
+// on mobile. This is a genuine JS branch (isDesktop ? treeA : treeB), so
+// only ONE navigation tree is ever mounted in the DOM at a time - never
+// two trees hidden/shown with CSS classes. That CSS-split pattern is what
+// caused the earlier dual-mounted-form bug on Login/Register/EventForm,
+// and here it's what was producing the leftover sidebar sliver on mobile:
+// a `hidden md:flex` sidebar still occupies layout space on some mobile
+// viewports/zoom levels even while visually hidden, because it's still
+// part of the DOM. A JS conditional never has that problem - the sidebar
+// literally doesn't exist in the tree on mobile.
 export default function PortalLayout() {
   const { user } = useAuthStore();
   const isDesktop = useIsDesktop();
+
+  // usePortalAccess() is called unconditionally (required - hooks can't
+  // be called conditionally), but its result is ignored below for a
+  // photographer: portal-access is a membership/subscription concept
+  // that only applies to organizers. GET /memberships/portal-access/ has
+  // no role check of its own on the backend, so for a photographer it
+  // would return a nonsensical "next_step: select_plan" (sending a
+  // photographer to /pricing to buy an event-organizer subscription).
+  // The isPhotographer check below runs before that result is ever acted
+  // on, so it never actually redirects anywhere based on it.
+  // PhotographerLayout has the mirror-image check.
   const { data: access, isLoading, isError } = usePortalAccess();
+
+  const isPhotographer = user?.role === "PHOTOGRAPHER";
+
+  if (isPhotographer) {
+    return <Navigate to="/photographer" replace />;
+  }
 
   if (isLoading) {
     return <PortalLayoutSkeleton />;
@@ -73,7 +87,7 @@ export default function PortalLayout() {
     return (
       <div className="flex min-h-screen bg-slate-50/70">
         <PortalSidebar />
-        <main className="flex-1 overflow-y-auto">
+        <main className="min-w-0 flex-1 overflow-y-auto">
           <Outlet />
         </main>
         <Toaster />
@@ -84,10 +98,10 @@ export default function PortalLayout() {
   return (
     <div className="flex min-h-screen flex-col bg-slate-50/70">
       <PortalTopBar />
-      <main className="flex-1 pb-20">
+      <main className="min-w-0 flex-1 pb-24">
         <Outlet />
       </main>
-      <BottomNav />
+      <PortalBottomNav />
       <Toaster />
     </div>
   );

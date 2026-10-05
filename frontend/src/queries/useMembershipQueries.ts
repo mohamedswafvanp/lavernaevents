@@ -6,8 +6,9 @@ import {
   getPlanBySlug,
   getPlans,
   getPortalAccess,
+  getTopupPacks,
   subscribeToPlan,
-} from "@/api/memberships.api";
+} from "@/api/membership.api";
 import { useAuthStore } from "@/stores/auth.store";
 
 export const membershipKeys = {
@@ -16,13 +17,13 @@ export const membershipKeys = {
   mySubscription: ["memberships", "my-subscription"] as const,
   myUsage: ["memberships", "my-usage"] as const,
   portalAccess: ["memberships", "portal-access"] as const,
+  topupPacks: ["memberships", "topup-packs"] as const,
 };
 
 export function usePlans() {
   return useQuery({
     queryKey: membershipKeys.plans,
     queryFn: getPlans,
-    // Plans rarely change - no need to refetch aggressively.
     staleTime: 5 * 60 * 1000,
   });
 }
@@ -56,10 +57,6 @@ export function useMyUsage() {
   });
 }
 
-// Not called at the app root or from Navbar - only from PortalLayout, which
-// is itself only mounted while an authenticated user is actually on a
-// /portal-prefixed route. retry: false because this is a one-shot decision
-// check, not something that should hammer the API on failure.
 export function usePortalAccess() {
   const { user } = useAuthStore();
 
@@ -94,5 +91,20 @@ export function useChangePlanMutation() {
       queryClient.invalidateQueries({ queryKey: membershipKeys.portalAccess });
       queryClient.invalidateQueries({ queryKey: membershipKeys.myUsage });
     },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Phase 26: organizer-facing topup packs
+// ---------------------------------------------------------------------------
+
+export function useTopupPacks() {
+  const { user } = useAuthStore();
+
+  return useQuery({
+    queryKey: membershipKeys.topupPacks,
+    queryFn: getTopupPacks,
+    enabled: !!user,
+    staleTime: 5 * 60 * 1000,
   });
 }

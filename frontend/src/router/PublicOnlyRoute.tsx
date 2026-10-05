@@ -18,7 +18,7 @@ export default function PublicOnlyRoute({ children }: PublicOnlyRouteProps) {
   }
 
   if (user) {
-    return <Navigate to="/" replace />;
+    return <Navigate to={user.role === "PHOTOGRAPHER" ? "/photographer" : "/"} replace />;
   }
 
   return <>{children}</>;

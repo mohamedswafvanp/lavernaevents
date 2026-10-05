@@ -1,18 +1,15 @@
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
-import { useIsDesktop } from "@/hooks/useMediaQuery";
 import { useEvent } from "@/queries/useEventQueries";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
 import GuestImportExport from "@/components/guests/GuestImportExport";
-import GuestCardGridDesktop from "@/components/guests/desktop/GuestCardGridDesktop";
-import GuestCardListMobile from "@/components/guests/mobile/GuestCardListMobile";
+import GuestCardList from "@/components/guests/GuestCardList";
 
 export default function EventGuests() {
   const { id } = useParams<{ id: string }>();
   const eventId = id ? Number(id) : undefined;
-  const isDesktop = useIsDesktop();
 
   const { data: event, isLoading, isError } = useEvent(eventId);
 
@@ -56,19 +53,13 @@ export default function EventGuests() {
           </Link>
 
           <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-            <h1 className="text-lg font-semibold text-[var(--brand-navy)]">
-              Guest management
-            </h1>
+            <h1 className="text-lg font-semibold text-[var(--brand-navy)]">Guest management</h1>
             <GuestImportExport eventId={eventId} />
           </div>
         </div>
       </div>
 
-      {isDesktop ? (
-        <GuestCardGridDesktop eventId={eventId} />
-      ) : (
-        <GuestCardListMobile eventId={eventId} />
-      )}
+      <GuestCardList eventId={eventId} />
     </div>
   );
 }
