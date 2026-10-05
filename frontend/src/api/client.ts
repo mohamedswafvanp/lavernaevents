@@ -1,30 +1,68 @@
 import axios, { type AxiosError, type InternalAxiosRequestConfig } from "axios";
 
-// Match whatever host the page itself is being viewed from, rather than
-// hardcoding one. The backend's auth cookies are SameSite=Lax, and browsers
-// treat "localhost" and "127.0.0.1" as different sites even though both
-// resolve to the loopback interface - a page at http://localhost:5173
-// calling a hardcoded http://127.0.0.1:8000 is a cross-site request, so
-// SameSite=Lax cookies never get attached to it (fetch/XHR only sends
-// SameSite=Lax cookies on same-site requests; cross-site top-level
-// navigation is the only cross-site case Lax allows, which doesn't apply
-// here). Deriving the API host from window.location.hostname keeps every
-// request same-site as the page, whichever of the two hosts - or a LAN IP,
-// for on-device testing - it's opened from. Both "localhost" and
-// "127.0.0.1" are already covered on the backend (CORS_ALLOWED_ORIGINS and
-// DJANGO_ALLOWED_HOSTS both list both), so this only changes which one a
-// given page load consistently uses.
+// ---------------------------------------------------------------------
+// Where does the API live?
+//
+// DEVELOPMENT (npm run dev): derive the host from the page itself. The
+// backend's auth cookies are SameSite=Lax, and browsers treat "localhost"
+// and "127.0.0.1" as different sites, so a page at http://localhost:5173
+// calling a hardcoded http://127.0.0.1:8000 would never get its cookies
+// attached. Using window.location.hostname keeps every request same-site
+// whichever of the two hosts (or a LAN IP) the page is opened from.
+//
+// PRODUCTION (Cloudflare Pages build): the app calls "/api" on its OWN
+// origin. A Pages Function (functions/api/[[path]].ts) forwards those calls
+// to the Render backend. Because the browser only ever talks to one site,
+// the auth cookies stay first-party and no CORS is involved.
+//   VITE_API_BASE_URL = /api
+//   VITE_API_ORIGIN   = https://<your-render-service>.onrender.com
+//                       (only used to resolve relative /media/... URLs)
+//
+// Both variables are read in production builds only, so a local .env can
+// never accidentally change how development works.
+// ---------------------------------------------------------------------
+
+const configuredBase: string | undefined = import.meta.env.PROD
+  ? import.meta.env.VITE_API_BASE_URL
+  : undefined;
+
+const configuredOrigin: string | undefined = import.meta.env.PROD
+  ? import.meta.env.VITE_API_ORIGIN
+  : undefined;
+
 const API_HOST =
   typeof window !== "undefined" && window.location.hostname
     ? window.location.hostname
     : "127.0.0.1";
 
+const DEV_ORIGIN = `http://${API_HOST}:8000`;
+
+function stripTrailingSlashes(value: string): string {
+  return value.replace(/\/+$/, "");
+}
+
+function resolveApiOrigin(): string {
+  if (configuredOrigin) return stripTrailingSlashes(configuredOrigin);
+
+  if (configuredBase) {
+    if (/^https?:\/\//i.test(configuredBase)) {
+      return new URL(configuredBase).origin;
+    }
+
+    return typeof window !== "undefined" ? window.location.origin : "";
+  }
+
+  return DEV_ORIGIN;
+}
+
 // The bare origin (no /api suffix) - needed to resolve relative media URLs
 // (e.g. event cover images) returned by endpoints that don't build an
 // absolute URL themselves. See lib/media.ts.
-export const API_ORIGIN = `http://${API_HOST}:8000`;
+export const API_ORIGIN = resolveApiOrigin();
 
-export const API_BASE_URL = `${API_ORIGIN}/api`;
+export const API_BASE_URL = configuredBase
+  ? stripTrailingSlashes(configuredBase)
+  : `${DEV_ORIGIN}/api`;
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -48,9 +86,8 @@ interface RetriableRequestConfig extends InternalAxiosRequestConfig {
 // through a token refresh is actively wrong: that call mints a BRAND NEW
 // valid access/refresh cookie pair right as the user is trying to log
 // out, silently re-authenticating them a moment after the UI already
-// shows them logged out. That's exactly what caused sign-out to land
-// back in an authenticated state inconsistently - the fix is to let a
-// failed logout call fail, never resurrect the session to retry it.
+// shows them logged out. The fix is to let a failed logout call fail,
+// never resurrect the session to retry it.
 // /auth/me/ is intentionally NOT in this list - a 401 there is exactly the
 // "access token expired, refresh cookie might still be valid" case this
 // interceptor exists to handle, so it must stay eligible for one refresh
