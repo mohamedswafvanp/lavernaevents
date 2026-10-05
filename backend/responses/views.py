@@ -1,9 +1,11 @@
+from django.http import HttpResponse
 from guests.models import Guest
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from .calendar import build_event_ics
 from .serializers import InvitationPublicSerializer, SubmitResponseSerializer
 from .services import ResponseError, get_invitation_by_token, submit_guest_response
 
@@ -64,6 +66,12 @@ class InvitationResponsePageView(APIView):
             ),
             "response_status": guest.response_status,
             "already_responded": guest.response_status != Guest.ResponseStatus.PENDING,
+            # Phase 23: a ready-made link to the .ics download below, so
+            # the frontend just renders an <a href> rather than
+            # reconstructing this URL itself.
+            "calendar_url": request.build_absolute_uri(
+                f"/api/respond/{response_token}/calendar/"
+            ),
         }
 
         serializer = InvitationPublicSerializer(data)
@@ -123,3 +131,44 @@ class InvitationResponsePageView(APIView):
             },
             status=status.HTTP_200_OK,
         )
+
+
+class InvitationCalendarView(APIView):
+    """Public endpoint: download a .ics file for this guest's invited event.
+
+    Phase 23. Same access model as InvitationResponsePageView - no
+    authentication, access controlled by possession of the unguessable
+    response_token. Deliberately GET-only and side-effect-free (does not
+    touch response_status or any other guest/invitation state).
+    """
+
+    permission_classes = [AllowAny]
+
+    def get(self, request, response_token):
+        try:
+            invitation = get_invitation_by_token(response_token)
+
+        except ResponseError as error:
+            response_status = RESPONSE_ERROR_STATUS_MAP.get(
+                error.code,
+                status.HTTP_400_BAD_REQUEST,
+            )
+
+            return Response(
+                {
+                    "success": False,
+                    "message": error.message,
+                    "errors": {"token": [error.message]},
+                },
+                status=response_status,
+            )
+
+        ics_bytes = build_event_ics(invitation.event, invitation.guest)
+
+        response = HttpResponse(ics_bytes, content_type="text/calendar; charset=utf-8")
+        safe_name = "".join(
+            ch for ch in invitation.event.name if ch.isalnum() or ch in (" ", "-", "_")
+        ).strip() or "event"
+        response["Content-Disposition"] = f'attachment; filename="{safe_name}.ics"'
+
+        return response

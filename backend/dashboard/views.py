@@ -8,12 +8,14 @@ from rest_framework.views import APIView
 from .serializers import (
     ChartDataPointSerializer,
     EventDashboardSerializer,
+    OrganizerInvitationOverviewSerializer,
     OrganizerOverviewSerializer,
 )
 from .services import (
     get_event_dashboard_stats,
     get_event_invitation_chart_data,
     get_event_response_chart_data,
+    get_organizer_invitation_overview,
     get_organizer_overview_stats,
 )
 
@@ -113,6 +115,28 @@ class OrganizerOverviewView(APIView):
             {
                 "success": True,
                 "message": "Overview statistics retrieved successfully.",
+                "data": serializer.data,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+class OrganizerInvitationDashboardView(APIView):
+    """Phase 25: return the full invitation-focused dashboard payload -
+    overview stats, channel performance, events needing attention, and
+    quota usage - in one call."""
+
+    permission_classes = [IsAuthenticated, IsOrganizer]
+
+    def get(self, request):
+        data = get_organizer_invitation_overview(request.user)
+
+        serializer = OrganizerInvitationOverviewSerializer(data)
+
+        return Response(
+            {
+                "success": True,
+                "message": "Dashboard retrieved successfully.",
                 "data": serializer.data,
             },
             status=status.HTTP_200_OK,

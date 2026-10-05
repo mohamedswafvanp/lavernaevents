@@ -20,6 +20,7 @@ class InvitationPublicSerializer(serializers.Serializer):
     invitation_image = serializers.CharField(allow_null=True)
     response_status = serializers.CharField()
     already_responded = serializers.BooleanField()
+    calendar_url = serializers.CharField()
 
 
 class SubmitResponseSerializer(serializers.Serializer):

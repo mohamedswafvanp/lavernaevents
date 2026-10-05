@@ -30,3 +30,25 @@ export function getInitials(name: string): string {
 
   return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
 }
+
+// Phase 22: human-readable relative time ("just now", "5 min ago",
+// "3 hours ago", "2 days ago") for PendingWhatsAppReminders.tsx's queued
+// reminder list. Falls back to a short absolute date once something is
+// more than 7 days old, since "23 days ago" is less useful than the
+// actual date at that point.
+export function formatRelativeTime(dateString: string): string {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffSeconds = Math.floor(diffMs / 1000);
+  const diffMinutes = Math.floor(diffSeconds / 60);
+  const diffHours = Math.floor(diffMinutes / 60);
+  const diffDays = Math.floor(diffHours / 24);
+
+  if (diffSeconds < 60) return "Just now";
+  if (diffMinutes < 60) return `${diffMinutes} min ago`;
+  if (diffHours < 24) return `${diffHours} hour${diffHours === 1 ? "" : "s"} ago`;
+  if (diffDays < 7) return `${diffDays} day${diffDays === 1 ? "" : "s"} ago`;
+
+  return date.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+}

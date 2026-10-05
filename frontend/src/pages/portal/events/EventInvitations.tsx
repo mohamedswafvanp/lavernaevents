@@ -7,6 +7,7 @@ import {
   ChevronRight,
   ExternalLink,
   Mail,
+  Phone,
   RefreshCw,
 } from "lucide-react";
 import { useIsDesktop } from "@/hooks/useMediaQuery";
@@ -17,6 +18,7 @@ import {
   useMarkWhatsAppSentMutation,
   useRetryNotificationMutation,
 } from "@/queries/useNotificationQueries";
+import InvitationReportTab from "@/components/invitations/InvitationReportTab";
 import { toastStore } from "@/stores/toast.store";
 import { getApiErrorMessage } from "@/lib/apiError";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -27,20 +29,25 @@ import type { InvitationStatus } from "@/types/invitation.types";
 import type { NotificationLog, NotificationStatus } from "@/types/notification.types";
 
 const INVITATION_STATUS_BADGE_CLASS: Record<InvitationStatus, string> = {
-  GENERATED: "bg-emerald-100 text-emerald-700",
+  GENERATED: "badge-success",
   FAILED: "bg-rose-100 text-rose-700",
 };
 
 const LOG_STATUS_BADGE_CLASS: Record<NotificationStatus, string> = {
-  LINK_GENERATED: "bg-amber-100 text-amber-700",
-  SENT: "bg-emerald-100 text-emerald-700",
+  LINK_GENERATED: "badge-gold",
+  SENT: "badge-success",
   FAILED: "bg-rose-100 text-rose-700",
+  // Phase 21: a voice call in flight - Twilio has accepted the request
+  // and is dialing, outcome not yet known (see
+  // notifications/services.py's apply_voice_call_status_callback).
+  CALLING: "bg-sky-100 text-sky-700",
 };
 
 const CHANNEL_LABEL: Record<NotificationLog["channel"], string> = {
   WHATSAPP: "WhatsApp",
   EMAIL: "Email",
   SMS: "SMS",
+  VOICE_CALL: "Voice Call",
 };
 
 function formatDateTime(value: string): string {
@@ -49,7 +56,7 @@ function formatDateTime(value: string): string {
   return date.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
 }
 
-type Tab = "invitations" | "logs";
+type Tab = "invitations" | "logs" | "report";
 
 export default function EventInvitations() {
   const { id } = useParams<{ id: string }>();
@@ -86,7 +93,7 @@ export default function EventInvitations() {
   }
 
   return (
-    <div className="px-4 py-8 sm:px-6 sm:py-10 lg:px-10">
+    <div className="mobile-safe-bottom px-4 py-6 sm:px-6 sm:py-10 lg:px-10">
       <div className="mx-auto max-w-4xl">
         <Link
           to={`/portal/events/${eventId}`}
@@ -100,15 +107,15 @@ export default function EventInvitations() {
           Invitations
         </h1>
 
-        <div className="mt-4 flex gap-2 border-b border-slate-100">
+        <div className="mt-4 flex gap-1 rounded-full bg-slate-100 p-1 sm:inline-flex sm:gap-2 sm:bg-transparent sm:p-0 sm:border-b sm:border-slate-100">
           <button
             type="button"
             onClick={() => setTab("invitations")}
             className={cn(
-              "border-b-2 px-3 py-2 text-sm font-medium transition-colors",
+              "flex-1 rounded-full px-3 py-2 text-sm font-medium transition-colors sm:flex-none sm:rounded-none sm:border-b-2 sm:px-3 sm:py-2",
               tab === "invitations"
-                ? "border-[var(--brand-pink)] text-[var(--brand-pink)]"
-                : "border-transparent text-slate-500 hover:text-[var(--brand-navy)]"
+                ? "bg-white text-[var(--brand-pink)] soft-shadow sm:bg-transparent sm:border-[var(--brand-pink)] sm:shadow-none"
+                : "text-slate-500 hover:text-[var(--brand-navy)] sm:border-transparent"
             )}
           >
             Invitations
@@ -117,21 +124,31 @@ export default function EventInvitations() {
             type="button"
             onClick={() => setTab("logs")}
             className={cn(
-              "border-b-2 px-3 py-2 text-sm font-medium transition-colors",
+              "flex-1 rounded-full px-3 py-2 text-sm font-medium transition-colors sm:flex-none sm:rounded-none sm:border-b-2 sm:px-3 sm:py-2",
               tab === "logs"
-                ? "border-[var(--brand-pink)] text-[var(--brand-pink)]"
-                : "border-transparent text-slate-500 hover:text-[var(--brand-navy)]"
+                ? "bg-white text-[var(--brand-pink)] soft-shadow sm:bg-transparent sm:border-[var(--brand-pink)] sm:shadow-none"
+                : "text-slate-500 hover:text-[var(--brand-navy)] sm:border-transparent"
             )}
           >
             Send log
           </button>
+          <button
+            type="button"
+            onClick={() => setTab("report")}
+            className={cn(
+              "flex-1 rounded-full px-3 py-2 text-sm font-medium transition-colors sm:flex-none sm:rounded-none sm:border-b-2 sm:px-3 sm:py-2",
+              tab === "report"
+                ? "bg-white text-[var(--brand-pink)] soft-shadow sm:bg-transparent sm:border-[var(--brand-pink)] sm:shadow-none"
+                : "text-slate-500 hover:text-[var(--brand-navy)] sm:border-transparent"
+            )}
+          >
+            Report
+          </button>
         </div>
 
-        {tab === "invitations" ? (
-          <InvitationsTab eventId={eventId} />
-        ) : (
-          <NotificationLogsTab eventId={eventId} />
-        )}
+        {tab === "invitations" && <InvitationsTab eventId={eventId} />}
+        {tab === "logs" && <NotificationLogsTab eventId={eventId} />}
+        {tab === "report" && <InvitationReportTab eventId={eventId} />}
       </div>
     </div>
   );
@@ -165,7 +182,7 @@ function InvitationsTab({ eventId }: { eventId: number }) {
       )}
 
       {!isLoading && !isError && invitations.length === 0 && (
-        <Card className="p-10 text-center">
+        <Card className="p-8 text-center sm:p-10">
           <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[var(--brand-pink)]/10 text-[var(--brand-pink)]">
             <Mail className="h-6 w-6" />
           </span>
@@ -192,7 +209,7 @@ function InvitationsTab({ eventId }: { eventId: number }) {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {invitations.map((invitation) => (
-                <tr key={invitation.id}>
+                <tr key={invitation.id} className="transition-colors hover:bg-slate-50">
                   <td className="px-6 py-4 font-medium text-[var(--brand-navy)]">
                     {invitation.guest_name}
                   </td>
@@ -304,6 +321,13 @@ function NotificationLogsTab({ eventId }: { eventId: number }) {
       );
     }
 
+    // Phase 21: a CALLING row is mid-flight (Twilio is dialing) - nothing
+    // for the organizer to do but wait for the status callback to land,
+    // so no retry/action button shows until it resolves to SENT or FAILED.
+    if (log.status === "CALLING") {
+      return <span className="text-xs text-slate-400">Waiting for call outcome...</span>;
+    }
+
     if (log.status === "FAILED") {
       return (
         <Button size="sm" variant="outline" onClick={() => handleRetry(log)} isLoading={retryMutation.isPending}>
@@ -338,13 +362,13 @@ function NotificationLogsTab({ eventId }: { eventId: number }) {
       )}
 
       {!isLoading && !isError && logs.length === 0 && (
-        <Card className="p-10 text-center">
+        <Card className="p-8 text-center sm:p-10">
           <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[var(--brand-pink)]/10 text-[var(--brand-pink)]">
             <Mail className="h-6 w-6" />
           </span>
           <p className="mt-4 font-semibold text-[var(--brand-navy)]">No sends yet</p>
           <p className="mt-2 text-sm text-slate-500">
-            Every WhatsApp, Email, or SMS send attempt for this event will show up here.
+            Every WhatsApp, Email, SMS, or Voice Call attempt for this event will show up here.
           </p>
         </Card>
       )}
@@ -363,11 +387,16 @@ function NotificationLogsTab({ eventId }: { eventId: number }) {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {logs.map((log) => (
-                <tr key={log.id}>
+                <tr key={log.id} className="transition-colors hover:bg-slate-50">
                   <td className="px-6 py-4 font-medium text-[var(--brand-navy)]">
                     {log.guest_name}
                   </td>
-                  <td className="px-6 py-4 text-slate-600">{CHANNEL_LABEL[log.channel]}</td>
+                  <td className="px-6 py-4 text-slate-600">
+                    <span className="flex items-center gap-1.5">
+                      {log.channel === "VOICE_CALL" && <Phone className="h-3.5 w-3.5 text-slate-400" />}
+                      {CHANNEL_LABEL[log.channel]}
+                    </span>
+                  </td>
                   <td className="px-6 py-4">
                     <span
                       className={cn(
@@ -397,7 +426,10 @@ function NotificationLogsTab({ eventId }: { eventId: number }) {
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="font-semibold text-[var(--brand-navy)]">{log.guest_name}</p>
-                  <p className="mt-0.5 text-xs text-slate-500">{CHANNEL_LABEL[log.channel]}</p>
+                  <p className="mt-0.5 flex items-center gap-1.5 text-xs text-slate-500">
+                    {log.channel === "VOICE_CALL" && <Phone className="h-3 w-3" />}
+                    {CHANNEL_LABEL[log.channel]}
+                  </p>
                 </div>
                 <span
                   className={cn(

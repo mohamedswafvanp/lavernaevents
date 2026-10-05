@@ -1,3 +1,4 @@
+# backend/users/models.py
 import random
 
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
@@ -59,6 +60,17 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     is_staff = models.BooleanField(
         default=False,
+    )
+
+    # Phase 14 (Admin Portal) - set by an admin via the User Management
+    # "Suspend" action. Checked in UserLoginSerializer.validate() to fully
+    # block login (separate from is_active, which Django's own auth system
+    # also uses -- keeping a distinct flag means "admin suspended this
+    # account" is never confused with any other is_active-driven behavior
+    # elsewhere in the codebase).
+    is_suspended = models.BooleanField(
+        default=False,
+        help_text="Set by an admin to block this user from logging in.",
     )
 
     created_at = models.DateTimeField(

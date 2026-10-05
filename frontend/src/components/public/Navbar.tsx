@@ -1,11 +1,13 @@
 import { useState } from "react";
-import { Link, NavLink } from "react-router-dom";
+import { Link, NavLink, useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
-import { Menu, X } from "lucide-react";
+import { LogOut, Menu, X } from "lucide-react";
 import logo from "@/assets/laverna-logo.png";
 import { buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuthStore } from "@/stores/auth.store";
+import { useLogoutMutation } from "@/queries/useAuthQueries";
+import { usePortalAccess } from "@/queries/useMembershipQueries";
 import { cn } from "@/lib/utils";
 
 const NAV_LINKS = [
@@ -17,6 +19,106 @@ const NAV_LINKS = [
   { to: "/faq", label: "FAQ" },
   { to: "/contact", label: "Contact" },
 ];
+
+// A logged-in user stays on the public site until they choose to enter
+// the portal - "Open portal" is a deliberate click, never an automatic
+// redirect. Where that click actually goes depends on portal access:
+// not yet subscribed -> /pricing to complete purchase first; fully
+// onboarded -> straight into /portal. usePortalAccess is the same single
+// source of truth PortalLayout's own gate uses, so this never drifts
+// out of sync with what actually happens once you land there.
+function usePortalDestination(): string {
+  const { data: access } = usePortalAccess();
+  return access?.can_access_portal ? "/portal" : "/pricing";
+}
+
+function AccountMenu({ onNavigate }: { onNavigate?: () => void }) {
+  const { user } = useAuthStore();
+  const logoutMutation = useLogoutMutation();
+  const navigate = useNavigate();
+  const portalDestination = usePortalDestination();
+
+  const initial = user?.full_name?.trim()?.[0]?.toUpperCase() ?? "?";
+
+  const handleLogout = async () => {
+    onNavigate?.();
+    await logoutMutation.mutateAsync();
+    navigate("/login", { replace: true });
+  };
+
+  return (
+    <div className="flex items-center gap-2">
+      <Link
+        to={portalDestination}
+        onClick={onNavigate}
+        className={buttonVariants({ variant: "primary", size: "sm" })}
+      >
+        Open portal
+      </Link>
+
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--brand-navy)] text-sm font-semibold text-white">
+        {initial}
+      </div>
+
+      <button
+        type="button"
+        onClick={handleLogout}
+        disabled={logoutMutation.isPending}
+        className="flex h-9 w-9 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-600 disabled:opacity-50"
+        aria-label="Sign out"
+        title="Sign out"
+      >
+        <LogOut className="h-4 w-4" />
+      </button>
+    </div>
+  );
+}
+
+function MobileAccountMenu({ onNavigate }: { onNavigate?: () => void }) {
+  const { user } = useAuthStore();
+  const logoutMutation = useLogoutMutation();
+  const navigate = useNavigate();
+  const portalDestination = usePortalDestination();
+
+  const initial = user?.full_name?.trim()?.[0]?.toUpperCase() ?? "?";
+
+  const handleLogout = async () => {
+    onNavigate?.();
+    await logoutMutation.mutateAsync();
+    navigate("/login", { replace: true });
+  };
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center gap-3 rounded-xl px-3 py-2">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--brand-navy)] text-sm font-semibold text-white">
+          {initial}
+        </div>
+        <p className="truncate text-sm font-medium text-[var(--brand-navy)]">
+          {user?.full_name ?? "Account"}
+        </p>
+      </div>
+
+      <Link
+        to={portalDestination}
+        onClick={onNavigate}
+        className={buttonVariants({ variant: "primary", className: "w-full" })}
+      >
+        Open portal
+      </Link>
+
+      <button
+        type="button"
+        onClick={handleLogout}
+        disabled={logoutMutation.isPending}
+        className="flex w-full items-center justify-center gap-2 rounded-full border border-slate-200 px-4 py-2.5 text-sm font-semibold text-rose-600 transition-colors hover:bg-rose-50 disabled:opacity-50"
+      >
+        <LogOut className="h-4 w-4" />
+        {logoutMutation.isPending ? "Signing out..." : "Sign out"}
+      </button>
+    </div>
+  );
+}
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -54,9 +156,7 @@ export default function Navbar() {
               <Skeleton className="h-9 w-24 rounded-full" />
             </>
           ) : user ? (
-            <Link to="/portal" className={buttonVariants({ variant: "primary", size: "sm" })}>
-              Open portal
-            </Link>
+            <AccountMenu />
           ) : (
             <>
               <Link to="/login" className={buttonVariants({ variant: "ghost", size: "sm" })}>
@@ -113,13 +213,7 @@ export default function Navbar() {
                     <Skeleton className="h-10 w-full rounded-full" />
                   </>
                 ) : user ? (
-                  <Link
-                    to="/portal"
-                    onClick={() => setMenuOpen(false)}
-                    className={buttonVariants({ variant: "primary", className: "w-full" })}
-                  >
-                    Open portal
-                  </Link>
+                  <MobileAccountMenu onNavigate={() => setMenuOpen(false)} />
                 ) : (
                   <>
                     <Link

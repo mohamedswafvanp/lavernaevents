@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import MembershipPlan, Subscription
+from .models import MembershipPlan, OrganizerTemplateLibrary, Subscription
 
 
 @admin.register(MembershipPlan)
@@ -13,7 +13,9 @@ class MembershipPlanAdmin(admin.ModelAdmin):
         "duration_days",
         "guest_limit",
         "event_limit",
-        "template_count",
+        "total_invitations",
+        "template_limit",
+        "voice_call_limit",
         "storage_limit_mb",
         "is_active",
         "display_order",
@@ -34,10 +36,6 @@ class MembershipPlanAdmin(admin.ModelAdmin):
     prepopulated_fields = {
         "slug": ("name",),
     }
-
-    filter_horizontal = (
-        "templates",
-    )
 
     ordering = (
         "display_order",
@@ -75,14 +73,22 @@ class MembershipPlanAdmin(admin.ModelAdmin):
             },
         ),
         (
-            "Invitation Templates",
+            "Invitation Quotas",
             {
                 "fields": (
-                    "templates",
+                    "total_invitations",
+                    "template_limit",
+                    "voice_call_limit",
                 ),
                 "description": (
-                    "Select which invitation templates organizers on "
-                    "this plan are allowed to use."
+                    "total_invitations is a single pool shared across WhatsApp, "
+                    "Email, and SMS sends. template_limit caps how many distinct "
+                    "templates (platform + the organizer's own custom uploads) the "
+                    "organizer may add to their library - see the Organizer Template "
+                    "Library section below for what's actually been added by whom. "
+                    "voice_call_limit is separate since automated voice calls cost "
+                    "far more per unit than a text-based send. Leave a field blank "
+                    "for unlimited."
                 ),
             },
         ),
@@ -107,12 +113,6 @@ class MembershipPlanAdmin(admin.ModelAdmin):
         ),
     )
 
-    @admin.display(description="Templates")
-    def template_count(self, obj: MembershipPlan) -> int:
-        """Show how many templates are assigned to this plan in the list view."""
-
-        return obj.templates.count()
-
 
 @admin.register(Subscription)
 class SubscriptionAdmin(admin.ModelAdmin):
@@ -122,6 +122,8 @@ class SubscriptionAdmin(admin.ModelAdmin):
         "user",
         "plan",
         "status",
+        "invitations_used",
+        "voice_calls_used",
         "started_at",
         "expires_at",
     )
@@ -145,4 +147,40 @@ class SubscriptionAdmin(admin.ModelAdmin):
         "started_at",
         "created_at",
         "updated_at",
+    )
+
+
+@admin.register(OrganizerTemplateLibrary)
+class OrganizerTemplateLibraryAdmin(admin.ModelAdmin):
+    """Admin configuration for viewing/managing organizers' template libraries.
+
+    Phase 17. Lets platform admins see at a glance how many templates each
+    organizer has added, and manually remove one (e.g. to free up a slot
+    as a support action) without touching the InvitationTemplate itself.
+    """
+
+    list_display = (
+        "organizer",
+        "template",
+        "added_at",
+    )
+
+    list_filter = (
+        "template__channel",
+        "template__is_custom",
+    )
+
+    search_fields = (
+        "organizer__mobile_number",
+        "organizer__email",
+        "organizer__full_name",
+        "template__name",
+    )
+
+    ordering = (
+        "-added_at",
+    )
+
+    readonly_fields = (
+        "added_at",
     )

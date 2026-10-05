@@ -4,7 +4,6 @@ export interface Payment {
   id: number;
   plan_name: string;
   stripe_checkout_session_id: string;
-  // DRF DecimalField serializes as a string (e.g. "49.00"), not a number.
   amount: string;
   currency: string;
   status: PaymentStatus;
@@ -12,6 +11,31 @@ export interface Payment {
 }
 
 export interface CreateCheckoutSessionResponse {
+  checkout_url: string;
+  stripe_checkout_session_id: string;
+}
+
+// ---------------------------------------------------------------------------
+// Phase 26: organizer topup pack purchases
+// ---------------------------------------------------------------------------
+
+export type TopupPackKind = "INVITATIONS" | "VOICE_CALLS";
+
+// Matches TopupPurchaseSerializer exactly (backend/payments/serializers.py).
+export interface TopupPurchase {
+  id: number;
+  pack_name: string;
+  pack_kind: TopupPackKind;
+  pack_quantity: number;
+  stripe_checkout_session_id: string;
+  amount: string;
+  status: PaymentStatus;
+  created_at: string;
+}
+
+// CreateTopupCheckoutSessionView returns the same checkout_url shape as the
+// plan checkout - both wrap stripe.checkout.Session.create identically.
+export interface CreateTopupCheckoutSessionResponse {
   checkout_url: string;
   stripe_checkout_session_id: string;
 }

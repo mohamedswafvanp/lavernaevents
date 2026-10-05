@@ -1,6 +1,11 @@
 from django.urls import path
 
-from .views import EventChartsView, EventDashboardView, OrganizerOverviewView
+from .views import (
+    EventChartsView,
+    EventDashboardView,
+    OrganizerInvitationDashboardView,
+    OrganizerOverviewView,
+)
 
 
 urlpatterns = [
@@ -8,6 +13,11 @@ urlpatterns = [
         "overview/",
         OrganizerOverviewView.as_view(),
         name="organizer-overview",
+    ),
+    path(
+        "invitation-overview/",
+        OrganizerInvitationDashboardView.as_view(),
+        name="organizer-invitation-overview",
     ),
     path(
         "events/<int:event_pk>/dashboard/",

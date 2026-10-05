@@ -1,9 +1,5 @@
-import { useIsDesktop } from "@/hooks/useMediaQuery";
-import EventFormDesktop from "@/components/events/desktop/EventFormDesktop";
-import EventFormMobile from "@/components/events/mobile/EventFormMobile";
+import EventForm from "@/components/events/EventForm";
 
 export default function EventCreate() {
-  const isDesktop = useIsDesktop();
-
-  return isDesktop ? <EventFormDesktop /> : <EventFormMobile />;
+  return <EventForm />;
 }

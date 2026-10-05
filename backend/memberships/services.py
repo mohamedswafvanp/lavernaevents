@@ -1,7 +1,7 @@
-from django.db import transaction
+from django.db import transaction, models
 from django.utils import timezone
 
-from .models import MembershipPlan, Subscription
+from .models import MembershipPlan, OrganizerTemplateLibrary, Subscription
 
 
 class SubscriptionError(Exception):
@@ -29,7 +29,7 @@ def get_active_subscription(user) -> Subscription | None:
 def create_active_subscription(user, plan: MembershipPlan) -> Subscription:
     """Create and return a new active subscription for the given plan.
 
-    Public so other apps (e.g. payments, after verifying a Razorpay
+    Public so other apps (e.g. payments, after verifying a Stripe
     payment) can activate a subscription once payment is confirmed.
     """
 
@@ -144,3 +144,91 @@ def change_user_plan(user, new_plan_slug: str) -> tuple[Subscription, str]:
         new_subscription = create_active_subscription(user, new_plan)
 
     return new_subscription, change_type
+
+
+# --------------------------------------------------
+# Template library (Phase 17)
+# --------------------------------------------------
+
+def add_template_to_library(organizer, template) -> OrganizerTemplateLibrary:
+    """Record that an organizer has added/used a template, if not already recorded.
+
+    Idempotent - safe to call every time a template is used (e.g. every
+    invitation send), not just the first time. Callers should run
+    check_template_limit() BEFORE calling this, so a template that would
+    have exceeded the limit never gets added. get_or_create avoids a
+    race between the limit check and the write (two concurrent requests
+    adding the same template would otherwise hit the UniqueConstraint).
+    """
+
+    entry, _ = OrganizerTemplateLibrary.objects.get_or_create(
+        organizer=organizer,
+        template=template,
+    )
+
+    return entry
+
+
+def get_organizer_template_count(organizer) -> int:
+    """Return how many distinct templates this organizer currently has in their library."""
+
+    return OrganizerTemplateLibrary.objects.filter(organizer=organizer).count()
+
+
+def remove_template_from_library(organizer, template) -> None:
+    """Remove a template from the organizer's library, freeing up a template_limit slot.
+
+    Does NOT delete the InvitationTemplate itself or any Invitation/
+    InvitationSend history already generated with it - those stay intact
+    (Invitation.template is on_delete=PROTECT, InvitationSend.template is
+    SET_NULL), this only removes the organizer's "slot" tracking so they
+    could add a different template in its place.
+    """
+
+    OrganizerTemplateLibrary.objects.filter(
+        organizer=organizer,
+        template=template,
+    ).delete()
+
+
+# --------------------------------------------------
+# Invitation quota spending (Phase 17)
+# --------------------------------------------------
+
+def spend_invitation_quota(user, count: int = 1) -> None:
+    """Increment the active subscription's invitations_used by `count`.
+
+    Called once per successful send (per guest per channel), after the
+    send actually succeeds - never before, so a failed send doesn't
+    consume quota. Silently does nothing if there's no active
+    subscription or the plan is unlimited, since check_invitation_limit()
+    is what callers should already be using to gate the send itself.
+    """
+
+    subscription = get_active_subscription(user)
+
+    if subscription is None:
+        return
+
+    Subscription.objects.filter(pk=subscription.pk).update(
+        invitations_used=models.F("invitations_used") + count,
+        updated_at=timezone.now(),
+    )
+
+
+def spend_voice_call_quota(user, count: int = 1) -> None:
+    """Increment the active subscription's voice_calls_used by `count`.
+
+    Mirrors spend_invitation_quota, for the separate voice-call pool
+    (Phase 21).
+    """
+
+    subscription = get_active_subscription(user)
+
+    if subscription is None:
+        return
+
+    Subscription.objects.filter(pk=subscription.pk).update(
+        voice_calls_used=models.F("voice_calls_used") + count,
+        updated_at=timezone.now(),
+    )

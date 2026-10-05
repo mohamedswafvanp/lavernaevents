@@ -1,9 +1,5 @@
-import { useIsDesktop } from "@/hooks/useMediaQuery";
-import VerifyMobileFormDesktop from "@/components/auth/desktop/VerifyMobileFormDesktop";
-import VerifyMobileFormMobile from "@/components/auth/mobile/VerifyMobileFormMobile";
+import VerifyMobileForm from "@/components/auth/VerifyMobileForm";
 
 export default function VerifyMobile() {
-  const isDesktop = useIsDesktop();
-
-  return isDesktop ? <VerifyMobileFormDesktop /> : <VerifyMobileFormMobile />;
+  return <VerifyMobileForm />;
 }

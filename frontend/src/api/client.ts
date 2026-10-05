@@ -41,11 +41,26 @@ interface RetriableRequestConfig extends InternalAxiosRequestConfig {
 // /auth/login/ and /auth/register/ never carry a session to refresh.
 // /auth/refresh/ is the hard safety check: without it, a 401 from the
 // refresh call itself would re-enter this same retry flow and loop.
+// /auth/logout/ MUST also be excluded: the backend's logout view is
+// AllowAny and blacklists the refresh cookie unconditionally, so it
+// should never 401 in the first place - but if it ever does (a stray
+// concurrent request, a race with another 401 in flight), retrying it
+// through a token refresh is actively wrong: that call mints a BRAND NEW
+// valid access/refresh cookie pair right as the user is trying to log
+// out, silently re-authenticating them a moment after the UI already
+// shows them logged out. That's exactly what caused sign-out to land
+// back in an authenticated state inconsistently - the fix is to let a
+// failed logout call fail, never resurrect the session to retry it.
 // /auth/me/ is intentionally NOT in this list - a 401 there is exactly the
 // "access token expired, refresh cookie might still be valid" case this
 // interceptor exists to handle, so it must stay eligible for one refresh
 // attempt like any other authenticated request.
-const NO_REFRESH_PATHS = ["/auth/login/", "/auth/register/", "/auth/refresh/"];
+const NO_REFRESH_PATHS = [
+  "/auth/login/",
+  "/auth/register/",
+  "/auth/refresh/",
+  "/auth/logout/",
+];
 
 function shouldSkipRefresh(url?: string): boolean {
   if (!url) return false;

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, type ReactNode } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import { queryClient } from "./api/queryClient";
@@ -10,6 +10,8 @@ import { Skeleton } from "./components/ui/skeleton";
 
 import PublicLayout from "./layouts/PublicLayout";
 import PortalLayout from "./layouts/PortalLayout";
+import PhotographerLayout from "./layouts/PhotographerLayout";
+import AdminLayout from "./layouts/AdminLayout";
 import ProtectedRoute from "./router/ProtectedRoute";
 import PublicOnlyRoute from "./router/PublicOnlyRoute";
 
@@ -24,8 +26,10 @@ import Contact from "./pages/public/Contact";
 import Register from "./pages/auth/Register";
 import Login from "./pages/auth/Login";
 import VerifyMobile from "./pages/auth/VerifyMobile";
+import RespondToInvitation from "./pages/public/RespondToInvitation";
+import ScanEvent from "./pages/public/ScanEvent";
 
-import Portal from "./pages/portal/Portal";
+import PortalDashboard from "./pages/portal/PortalDashboard";
 import GuestsHub from "./pages/portal/GuestsHub";
 import EventsList from "./pages/portal/events/EventsList";
 import EventCreate from "./pages/portal/events/EventCreate";
@@ -33,10 +37,26 @@ import EventDetail from "./pages/portal/events/EventDetail";
 import EventEdit from "./pages/portal/events/EventEdit";
 import EventGuests from "./pages/portal/events/EventGuests";
 import EventInvitations from "./pages/portal/events/EventInvitations";
+import EventGallery from "./pages/portal/events/EventGallery";
+import EventQRCode from "./pages/portal/events/EventQRCode";
 import InvitationTemplates from "./pages/portal/InvitationTemplates";
+import Billing from "./pages/portal/Billing";
 import ComingSoon from "./pages/portal/ComingSoon";
 import PaymentSuccess from "./pages/payment/PaymentSuccess";
 import PaymentCancelled from "./pages/payment/PaymentCancelled";
+import PaymentTopupSuccess from "./pages/payment/PaymentTopupSuccess";
+
+import PhotographerEvents from "./pages/photographer/PhotographerEvents";
+import PhotographerEventUpload from "./pages/photographer/PhotographerEventUpload";
+
+import AdminDashboard from "./pages/admin/Dashboard";
+import AdminUserManagement from "./pages/admin/UserManagement";
+import AdminMembershipPlans from "./pages/admin/MembershipPlans";
+import AdminInvitationTemplates from "./pages/admin/InvitationTemplates";
+import AdminMediaManagement from "./pages/admin/MediaManagement";
+import AdminChannelPools from "./pages/admin/ChannelPools";
+import AdminTopupPacks from "./pages/admin/TopupPacks";
+import AdminReports from "./pages/admin/Reports";
 
 function SessionBootstrap() {
   useCurrentUser();
@@ -45,24 +65,9 @@ function SessionBootstrap() {
 
   useEffect(() => {
     setSessionExpiredHandler(() => {
-      // setQueryData(), not removeQueries(): removeQueries() deletes the
-      // cache entry, and since this component's useCurrentUser() call stays
-      // mounted for the app's whole lifetime, an active observer losing its
-      // cache entry triggers an immediate refetch - which 401s again on a
-      // logged-out session and re-enters this same handler, looping forever.
-      // Overwriting the value in place updates the cache without starting a
-      // new request.
       rqClient.setQueryData(authKeys.currentUser, null);
       authStore.setUser(null);
       authStore.setChecking(false);
-
-      // No imperative navigate() here on purpose. ProtectedRoute already
-      // reads this same auth store and declaratively redirects to /login
-      // once `user` goes null, so anyone on a protected page gets bounced
-      // automatically. A forced navigate() here would also incorrectly yank
-      // anonymous visitors on public pages (e.g. a first-time visit to "/")
-      // over to /login the moment the initial /me/ check fails, which is
-      // exactly the behavior public pages must never have.
     });
   }, [rqClient]);
 
@@ -90,6 +95,20 @@ function AppSkeleton() {
   );
 }
 
+function PublicOnlyForNonPhotographers({ children }: { children: ReactNode }) {
+  const { user } = useAuthStore();
+
+  if (user?.role === "PHOTOGRAPHER") {
+    return <Navigate to="/photographer" replace />;
+  }
+
+  if (user?.role === "ADMIN") {
+    return <Navigate to="/admin" replace />;
+  }
+
+  return <>{children}</>;
+}
+
 function AppRoutes() {
   const { isChecking, user } = useAuthStore();
 
@@ -97,23 +116,25 @@ function AppRoutes() {
     return <AppSkeleton />;
   }
 
-  // Capacitor.isNativePlatform() never changes for the life of a running
-  // app (the same bundle never flips between running in a browser and
-  // running inside the native shell), so this is safe to read once per
-  // render rather than needing to live in state.
   const nativeApp = isNativeApp();
-  const fallbackPath = user ? "/portal" : "/login";
+  const fallbackPath = !user
+    ? "/login"
+    : user.role === "PHOTOGRAPHER"
+      ? "/photographer"
+      : user.role === "ADMIN"
+        ? "/admin"
+        : "/portal";
 
   return (
     <Routes>
-      {/*
-        Public marketing site - WEB ONLY. The native app is portal-only and
-        these routes simply don't exist inside it (not hidden, not gated -
-        genuinely absent from the route tree), per the product decision that
-        there is no in-app marketing site, just Login/Register -> Portal.
-      */}
       {!nativeApp && (
-        <Route element={<PublicLayout />}>
+        <Route
+          element={
+            <PublicOnlyForNonPhotographers>
+              <PublicLayout />
+            </PublicOnlyForNonPhotographers>
+          }
+        >
           <Route index element={<Home />} />
           <Route path="about" element={<About />} />
           <Route path="features" element={<Features />} />
@@ -124,24 +145,8 @@ function AppRoutes() {
         </Route>
       )}
 
-      {/*
-        Inside the native app there is no public home page - "/" itself
-        goes straight into the portal funnel (PortalLayout's own gate then
-        decides between /login, /verify-mobile, /pricing, or the portal).
-      */}
       {nativeApp && <Route index element={<Navigate to={fallbackPath} replace />} />}
 
-      {/*
-        Auth + payment routes are SHARED between web and native, and are
-        deliberately NOT nested under PublicLayout (they used to be, before
-        this change - that meant the marketing Navbar/Footer were
-        technically wrapping the login/register screens on web too, which
-        was never the intent given each auth page is already a
-        self-contained full-screen design with its own logo/background).
-        On native there is no PublicLayout to nest them under at all, so
-        this also happens to be the only structure that actually works on
-        both surfaces.
-      */}
       <Route
         path="register"
         element={
@@ -160,26 +165,52 @@ function AppRoutes() {
       />
       <Route path="verify-mobile" element={<VerifyMobile />} />
 
-      {/*
-        Reachable post-checkout redirects from Stripe, shared between web
-        and native (a user might subscribe from either surface). Not
-        wrapped in PublicOnlyRoute (a logged-in user must be able to land
-        here) and not gated behind ProtectedRoute either - both endpoints
-        they call already require auth on the backend, so there's nothing
-        extra to enforce client-side.
-      */}
+      <Route path="respond/:token" element={<RespondToInvitation />} />
+
+      <Route path="scan/:token" element={<ScanEvent />} />
+
       <Route path="payment/success" element={<PaymentSuccess />} />
       <Route path="payment/cancelled" element={<PaymentCancelled />} />
+      {/* Phase 26: dedicated landing for topup-pack purchases, separate
+          from the plan-purchase success page since it polls a different
+          status endpoint and shows pack info instead of plan info. */}
+      <Route path="payment/topup-success" element={<PaymentTopupSuccess />} />
+
+      <Route
+        path="photographer"
+        element={
+          <ProtectedRoute>
+            <PhotographerLayout />
+          </ProtectedRoute>
+        }
+      >
+        <Route index element={<PhotographerEvents />} />
+        <Route path="events/:id" element={<PhotographerEventUpload />} />
+      </Route>
 
       {/*
-        The authenticated portal - shared between web and native, and
-        unconditionally a sibling of the public route group above (never
-        nested inside PublicLayout), which is what actually keeps the
-        marketing Navbar/Footer out of the portal on web. PortalLayout is
-        its own shell (sidebar on desktop, bottom tab bar on mobile) and
-        also owns the portal-access gate, so every page nested here is
-        already guaranteed verified + subscribed before it ever mounts.
+        Phase 26: added channel-pools (platform-wide pool monitoring +
+        topup) and topup-packs (admin CRUD on the fixed packs organizers
+        can buy) to the admin portal.
       */}
+      <Route
+        path="admin"
+        element={
+          <ProtectedRoute>
+            <AdminLayout />
+          </ProtectedRoute>
+        }
+      >
+        <Route index element={<AdminDashboard />} />
+        <Route path="users" element={<AdminUserManagement />} />
+        <Route path="plans" element={<AdminMembershipPlans />} />
+        <Route path="templates" element={<AdminInvitationTemplates />} />
+        <Route path="media" element={<AdminMediaManagement />} />
+        <Route path="channel-pools" element={<AdminChannelPools />} />
+        <Route path="topup-packs" element={<AdminTopupPacks />} />
+        <Route path="reports" element={<AdminReports />} />
+      </Route>
+
       <Route
         path="portal"
         element={
@@ -188,7 +219,7 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       >
-        <Route index element={<Portal />} />
+        <Route index element={<PortalDashboard />} />
         <Route path="guests" element={<GuestsHub />} />
         <Route path="events" element={<EventsList />} />
         <Route path="events/new" element={<EventCreate />} />
@@ -196,20 +227,19 @@ function AppRoutes() {
         <Route path="events/:id/edit" element={<EventEdit />} />
         <Route path="events/:id/guests" element={<EventGuests />} />
         <Route path="events/:id/invitations" element={<EventInvitations />} />
+        <Route path="events/:id/gallery" element={<EventGallery />} />
+        <Route path="events/:id/qr-code" element={<EventQRCode />} />
         <Route path="templates" element={<InvitationTemplates />} />
 
-        {/*
-          Placeholders for nav links (sidebar + bottom nav + account menu)
-          whose real feature isn't built yet - every linked path must
-          resolve to something, never 404 or a blank screen, even before
-          its actual phase lands.
-        */}
+        {/* Phase 26: organizer-facing usage dashboard + topup pack purchase flow. */}
+        <Route path="billing" element={<Billing />} />
+
         <Route
           path="gallery"
           element={
             <ComingSoon
               title="Gallery"
-              description="Photo galleries for your events are coming in an upcoming update."
+              description="Open an event and use its Gallery tab to manage photos and videos."
             />
           }
         />
@@ -233,13 +263,6 @@ function AppRoutes() {
         />
       </Route>
 
-      {/*
-        Native-app-only catch-all: any URL that isn't one of the shared
-        routes above (most notably, an attempt to reach a public-marketing
-        path that simply doesn't exist in-app) redirects into the portal
-        funnel instead of rendering a blank screen. Web has no catch-all,
-        matching its existing behavior.
-      */}
       {nativeApp && <Route path="*" element={<Navigate to={fallbackPath} replace />} />}
     </Routes>
   );

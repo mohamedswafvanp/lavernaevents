@@ -1,9 +1,10 @@
 import { useRef, useState } from "react";
-import { AlertCircle, CheckCircle2, Download, Upload, X } from "lucide-react";
+import { AlertCircle, CheckCircle2, Contact, Download, Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { exportGuestsCsv } from "@/api/guests.api";
 import { useImportGuestsCsvMutation } from "@/queries/useGuestQueries";
 import { getApiErrorMessage } from "@/lib/apiError";
+import GuestContactImport from "./GuestContactImport";
 import type { CSVImportResult } from "@/types/guest.types";
 
 interface GuestImportExportProps {
@@ -18,6 +19,7 @@ export default function GuestImportExport({ eventId }: GuestImportExportProps) {
   const [importError, setImportError] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
+  const [showContactImport, setShowContactImport] = useState(false);
 
   const handleImportClick = () => {
     fileInputRef.current?.click();
@@ -54,6 +56,14 @@ export default function GuestImportExport({ eventId }: GuestImportExportProps) {
   return (
     <div>
       <div className="flex flex-wrap items-center gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setShowContactImport((prev) => !prev)}
+        >
+          <Contact className="h-4 w-4" />
+          Import from Contacts
+        </Button>
         <Button variant="outline" size="sm" onClick={handleImportClick} isLoading={importMutation.isPending}>
           <Upload className="h-4 w-4" />
           Import CSV
@@ -70,6 +80,12 @@ export default function GuestImportExport({ eventId }: GuestImportExportProps) {
           onChange={handleFileChange}
         />
       </div>
+
+      {showContactImport && (
+        <div className="mt-3">
+          <GuestContactImport eventId={eventId} />
+        </div>
+      )}
 
       {exportError && <p className="mt-2 text-sm text-rose-600">{exportError}</p>}
       {importError && <p className="mt-2 text-sm text-rose-600">{importError}</p>}

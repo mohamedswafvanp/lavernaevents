@@ -5,17 +5,20 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .models import MembershipPlan
+from .topup_models import TopupPack
 from .serializers import (
     ChangePlanSerializer,
     MembershipPlanSerializer,
     MyUsageSerializer,
     SubscribeSerializer,
     SubscriptionSerializer,
+    TopupPackSerializer,
 )
 from .services import (
     SubscriptionError,
     change_user_plan,
     get_active_subscription,
+    get_organizer_template_count,
     subscribe_user_to_plan,
 )
 from .utils import get_effective_plan
@@ -251,16 +254,22 @@ class ChangePlanView(APIView):
 class MyUsageView(APIView):
     """Return the authenticated user's plan limits and feature access.
 
-    Usage counts (e.g. guests used so far) are not included yet since
-    the Events/Guests/Gallery modules do not exist. This currently
-    reports the plan's LIMITS only; per-resource "used" counts will be
-    added once those modules are built.
+    Phase 17: template_limit usage now reports the organizer's actual
+    OrganizerTemplateLibrary count (template_count / template_remaining)
+    instead of a static plan field, since template_limit is a count the
+    organizer consumes by adding templates to their library - mirroring
+    how invitations_used/invitations_remaining already work for the
+    shared invitation pool.
+
+    Phase 26: added invitations_topup/voice_calls_topup, reporting how
+    much of the organizer's current remaining quota came from a topup
+    purchase on top of their plan's base limit.
     """
 
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        """Return the logged-in user's effective plan limits."""
+        """Return the logged-in user's effective plan limits and usage."""
 
         plan = get_effective_plan(request.user)
 
@@ -270,20 +279,53 @@ class MyUsageView(APIView):
                 "has_active_plan": False,
                 "guest_limit": None,
                 "event_limit": None,
+                "template_limit": None,
                 "template_count": None,
+                "template_remaining": None,
                 "storage_limit_mb": None,
+                "total_invitations": None,
+                "invitations_used": None,
+                "invitations_topup": None,
+                "invitations_remaining": None,
+                "voice_call_limit": None,
+                "voice_calls_used": None,
+                "voice_calls_topup": None,
+                "voice_calls_remaining": None,
                 "gallery_enabled": False,
                 "qr_code_enabled": False,
                 "photographer_access_enabled": False,
             }
         else:
+            subscription = get_active_subscription(request.user)
+            template_count = get_organizer_template_count(request.user)
+
+            template_remaining = (
+                None
+                if plan.template_limit is None
+                else max(plan.template_limit - template_count, 0)
+            )
+
             data = {
                 "plan_name": plan.name,
                 "has_active_plan": True,
                 "guest_limit": plan.guest_limit,
                 "event_limit": plan.event_limit,
-                "template_count": plan.templates.count(),
+                "template_limit": plan.template_limit,
+                "template_count": template_count,
+                "template_remaining": template_remaining,
                 "storage_limit_mb": plan.storage_limit_mb,
+                "total_invitations": plan.total_invitations,
+                "invitations_used": subscription.invitations_used if subscription else 0,
+                "invitations_topup": subscription.invitations_topup if subscription else 0,
+                "invitations_remaining": (
+                    subscription.invitations_remaining() if subscription else plan.total_invitations
+                ),
+                "voice_call_limit": plan.voice_call_limit,
+                "voice_calls_used": subscription.voice_calls_used if subscription else 0,
+                "voice_calls_topup": subscription.voice_calls_topup if subscription else 0,
+                "voice_calls_remaining": (
+                    subscription.voice_calls_remaining() if subscription else plan.voice_call_limit
+                ),
                 "gallery_enabled": plan.gallery_enabled,
                 "qr_code_enabled": plan.qr_code_enabled,
                 "photographer_access_enabled": plan.photographer_access_enabled,
@@ -353,6 +395,29 @@ class PortalAccessView(APIView):
                     "can_access_portal": True,
                     "next_step": None,
                 },
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+class TopupPackListView(ListAPIView):
+    """Phase 26: list all active topup packs available for organizers to buy."""
+
+    serializer_class = TopupPackSerializer
+    permission_classes = [IsAuthenticated]
+    pagination_class = None
+
+    def get_queryset(self):
+        return TopupPack.objects.filter(is_active=True).order_by("display_order", "price")
+
+    def list(self, request, *args, **kwargs):
+        serializer = self.get_serializer(self.get_queryset(), many=True)
+
+        return Response(
+            {
+                "success": True,
+                "message": "Topup packs retrieved successfully.",
+                "data": serializer.data,
             },
             status=status.HTTP_200_OK,
         )

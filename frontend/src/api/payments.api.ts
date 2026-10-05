@@ -1,6 +1,11 @@
 import { apiClient } from "./client";
 import type { ApiResponse } from "@/types/api.types";
-import type { CreateCheckoutSessionResponse, Payment } from "@/types/payment.types";
+import type {
+  CreateCheckoutSessionResponse,
+  CreateTopupCheckoutSessionResponse,
+  Payment,
+  TopupPurchase,
+} from "@/types/payment.types";
 
 export async function createCheckoutSession(
   planSlug: string
@@ -15,6 +20,27 @@ export async function createCheckoutSession(
 export async function getPaymentStatus(sessionId: string): Promise<Payment> {
   const { data } = await apiClient.get<ApiResponse<Payment>>(
     `/payments/status/${sessionId}/`
+  );
+  return data.data;
+}
+
+// ---------------------------------------------------------------------------
+// Phase 26: organizer topup pack purchases
+// ---------------------------------------------------------------------------
+
+export async function createTopupCheckoutSession(
+  packId: number
+): Promise<CreateTopupCheckoutSessionResponse> {
+  const { data } = await apiClient.post<ApiResponse<CreateTopupCheckoutSessionResponse>>(
+    "/payments/topup/create-checkout-session/",
+    { pack_id: packId }
+  );
+  return data.data;
+}
+
+export async function getTopupPurchaseStatus(sessionId: string): Promise<TopupPurchase> {
+  const { data } = await apiClient.get<ApiResponse<TopupPurchase>>(
+    `/payments/topup/status/${sessionId}/`
   );
   return data.data;
 }
