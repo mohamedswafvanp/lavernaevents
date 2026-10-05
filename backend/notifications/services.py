@@ -84,6 +84,10 @@ def build_invitation_image_link(invitation: Invitation) -> str:
     WhatsApp (wa.me) and SMS can't carry an attachment, so for those
     channels the card is shared as a link instead. Email attaches the
     image directly and does not use this.
+
+    With cloud storage (Supabase / S3) the file URL is already an absolute
+    public https:// address and is returned as is; with local storage it
+    is a relative /media/... path that gets PUBLIC_BACKEND_URL put in front.
     """
 
     if not invitation.image_file:
@@ -317,7 +321,12 @@ def _send_via_email(invitation, message: str, organizer=None) -> NotificationLog
         )
 
         if invitation.image_file:
-            email.attach_file(invitation.image_file.path)
+            # Read through Django's storage layer so this works for local
+            # disk AND cloud storage (cloud files have no filesystem path).
+            attachment_name = invitation.image_file.name.rsplit("/", 1)[-1]
+
+            with invitation.image_file.open("rb") as image_handle:
+                email.attach(attachment_name, image_handle.read(), "image/jpeg")
 
         email.send(fail_silently=False)
 
