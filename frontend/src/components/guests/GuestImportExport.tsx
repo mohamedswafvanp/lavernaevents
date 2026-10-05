@@ -33,7 +33,7 @@ export default function GuestImportExport({ eventId }: GuestImportExportProps) {
     setImportResult(null);
     setImportError(null);
 
-    importMutation.mutate(file, {
+    importMutation.mutate({ file }, {
       onSuccess: (result) => setImportResult(result),
       onError: (error) =>
         setImportError(getApiErrorMessage(error, "Couldn't import this file.")),

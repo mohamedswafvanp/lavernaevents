@@ -296,3 +296,4 @@ export async function deactivateAdminTopupPack(packId: number): Promise<AdminTop
   );
   return data.data;
 }
+export type { AdminMediaQueryParams, AdminUsersQueryParams };
