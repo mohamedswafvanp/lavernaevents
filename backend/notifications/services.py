@@ -1,9 +1,11 @@
+import logging
 import re
 from email.utils import formataddr, parseaddr
 
 from decouple import config
 from django.conf import settings
-from django.core.mail import EmailMessage
+from django.core.mail import EmailMultiAlternatives
+from django.utils.html import escape
 from django.db.models import Q
 from django.utils import timezone
 from guests.models import Guest
@@ -28,6 +30,9 @@ from memberships.utils import (
 from .models import NotificationLog
 
 
+logger = logging.getLogger(__name__)
+
+
 class NotificationError(Exception):
     """Raised when a notification send action cannot be completed."""
 
@@ -49,6 +54,7 @@ BULK_STOP_CODES = {
     "no_active_template",
     "active_template_wrong_event",
     "voice_not_configured",
+    "sms_not_configured",
 }
 
 
@@ -197,17 +203,42 @@ def _spoken_time(value) -> str:
     return text.replace(":00", "")
 
 
+def normalize_phone_digits(mobile_number: str) -> str:
+    """Return a guest's number as digits WITH the country code, e.g.
+    "9188560170" -> "919188560170".
+
+    The old check "does it already start with the country code?" was
+    wrong for Indian mobile numbers that themselves begin with 91
+    (like 9188560170): it skipped adding +91 and produced an invalid
+    number. A 10-digit number is always a national number; the country
+    code is treated as already present only when the number is longer
+    than 10 digits or was typed with a leading + / 00.
+    """
+
+    raw = str(mobile_number or "").strip()
+    digits = re.sub(r"\D", "", raw)
+
+    if raw.startswith("+"):
+        return digits
+
+    if digits.startswith("00"):
+        return digits[2:]
+
+    digits = digits.lstrip("0")
+    country_code = config("DEFAULT_COUNTRY_CODE", default="91")
+
+    if len(digits) > 10 and digits.startswith(country_code):
+        return digits
+
+    return f"{country_code}{digits}"
+
+
 def build_wa_link(invitation, message: str) -> str:
     """Build a wa.me deep link (no WhatsApp Business API needed)."""
 
     from urllib.parse import quote
 
-    mobile_number = invitation.guest.mobile_number.lstrip("0")
-
-    country_code = config("DEFAULT_COUNTRY_CODE", default="91")
-
-    if not mobile_number.startswith(country_code):
-        mobile_number = f"{country_code}{mobile_number}"
+    mobile_number = normalize_phone_digits(invitation.guest.mobile_number)
 
     return f"https://wa.me/{mobile_number}?text={quote(message)}"
 
@@ -215,13 +246,7 @@ def build_wa_link(invitation, message: str) -> str:
 def _format_e164(mobile_number: str) -> str:
     """Format a guest's stored mobile number as E.164 for Twilio."""
 
-    digits = mobile_number.lstrip("0")
-    country_code = config("DEFAULT_COUNTRY_CODE", default="91")
-
-    if not digits.startswith(country_code):
-        digits = f"{country_code}{digits}"
-
-    return f"+{digits}"
+    return f"+{normalize_phone_digits(mobile_number)}"
 
 
 def _build_message_for_channel(invitation: Invitation, channel: str) -> str:
@@ -311,9 +336,73 @@ def _send_via_whatsapp_one_click(invitation, message: str, organizer=None) -> No
     )
 
 
+def build_invitation_html(invitation: Invitation, response_link: str, image_link: str) -> str:
+    """The HTML version of the invitation email: greeting, the invitation
+    card, the key details and ONE "View your invitation" button."""
+
+    event = invitation.event
+    guest = invitation.guest
+
+    details = [
+        ("Date", event.event_date.strftime("%A, %d %B %Y")),
+        ("Time", format_event_time(event)),
+        ("Venue", event.venue_name or ""),
+    ]
+
+    rows = "".join(
+        f'<tr><td style="padding:6px 0;color:#94a3b8;font-size:12px;letter-spacing:1px;'
+        f'text-transform:uppercase;width:80px;vertical-align:top">{escape(label)}</td>'
+        f'<td style="padding:6px 0;color:#1f2a44;font-size:15px;font-weight:600">{escape(value)}</td></tr>'
+        for label, value in details
+        if value
+    )
+
+    card = (
+        f'<tr><td style="padding:0 24px 8px"><a href="{escape(response_link)}">'
+        f'<img src="{escape(image_link)}" alt="Your invitation" width="552" '
+        f'style="display:block;width:100%;max-width:552px;height:auto;border-radius:12px;border:0"></a></td></tr>'
+        if image_link
+        else ""
+    )
+
+    host = escape(event.host_name or getattr(event.organizer, "full_name", "") or "")
+    intro = (
+        f"{host} has invited you to celebrate" if host else "You are warmly invited to"
+    )
+
+    return f"""<!doctype html>
+<html><body style="margin:0;padding:0;background:#f4f1f8;font-family:Arial,Helvetica,sans-serif">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f1f8;padding:24px 12px">
+<tr><td align="center">
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:16px;overflow:hidden">
+<tr><td style="padding:28px 24px 8px;text-align:center">
+<p style="margin:0;color:#C2185B;font-size:12px;letter-spacing:3px;text-transform:uppercase;font-weight:bold">You're invited</p>
+<h1 style="margin:10px 0 4px;color:#1f2a44;font-size:26px;line-height:1.25">{escape(event.name)}</h1>
+<p style="margin:0;color:#64748b;font-size:14px">Hi {escape(guest.name)}, {intro}</p>
+</td></tr>
+{card}
+<tr><td style="padding:12px 24px 4px">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #eef0f4;border-bottom:1px solid #eef0f4;padding:8px 0">{rows}</table>
+</td></tr>
+<tr><td align="center" style="padding:24px">
+<a href="{escape(response_link)}" style="display:inline-block;background:#C2185B;color:#ffffff;text-decoration:none;font-weight:bold;font-size:16px;padding:14px 32px;border-radius:12px">View your invitation</a>
+<p style="margin:14px 0 0;color:#94a3b8;font-size:12px">Confirm your attendance, see the location and add it to your calendar.</p>
+</td></tr>
+<tr><td style="padding:0 24px 24px;text-align:center;color:#94a3b8;font-size:11px">
+If the button doesn't work, open this link:<br><a href="{escape(response_link)}" style="color:#64748b;word-break:break-all">{escape(response_link)}</a>
+</td></tr>
+</table>
+<p style="color:#94a3b8;font-size:11px;margin:14px 0 0">Sent with LavernaEvents</p>
+</td></tr></table></body></html>"""
+
+
 def _send_via_email(invitation, message: str, organizer=None) -> NotificationLog:
     """Send the invitation by email from the platform address, shown as
-    "<Organizer> via LavernaEvents", with Reply-To set to the organizer."""
+    "<Organizer> via LavernaEvents", with Reply-To set to the organizer.
+
+    The email is HTML (card image + one "View your invitation" button)
+    with the plain-text message as the fallback version, and the card is
+    also attached so the guest can save it."""
 
     guest = invitation.guest
 
@@ -333,12 +422,20 @@ def _send_via_email(invitation, message: str, organizer=None) -> NotificationLog
     from_email, reply_to = build_email_identity(organizer or invitation.event.organizer)
 
     try:
-        email = EmailMessage(
+        response_link = build_response_link(invitation.response_token)
+        image_link = build_invitation_image_link(invitation)
+
+        email = EmailMultiAlternatives(
             subject=f"You're invited to {invitation.event.name}!",
             body=message,
             from_email=from_email,
             to=[guest.email],
             reply_to=reply_to or None,
+        )
+
+        email.attach_alternative(
+            build_invitation_html(invitation, response_link, image_link),
+            "text/html",
         )
 
         if invitation.image_file:
@@ -352,6 +449,8 @@ def _send_via_email(invitation, message: str, organizer=None) -> NotificationLog
         email.send(fail_silently=False)
 
     except Exception as exc:
+        logger.exception("Invitation email to %s failed", guest.email)
+
         log.status = NotificationLog.Status.FAILED
         log.failure_reason = str(exc)[:255]
         log.save(update_fields=["status", "failure_reason", "updated_at"])
@@ -365,6 +464,51 @@ def _send_via_email(invitation, message: str, organizer=None) -> NotificationLog
     log.save(update_fields=["status", "updated_at"])
 
     return log
+
+
+# Plain-language reasons for the Twilio errors organizers actually hit.
+_TWILIO_ERROR_HINTS = {
+    20003: "Twilio rejected the login (Account SID / Auth Token are wrong).",
+    21211: "That mobile number is not valid.",
+    21214: "That mobile number cannot receive messages.",
+    21408: "Twilio is not allowed to send to this country yet (enable it under Messaging / Voice geo permissions).",
+    21606: "The 'from' number is not a Twilio number that can send SMS.",
+    21608: "Trial account: this number is not verified in Twilio. Verify it under Verified Caller IDs, or upgrade.",
+    21610: "This guest has opted out of messages.",
+    21612: "Twilio cannot send from this number to that destination.",
+    21614: "That mobile number is not a valid mobile number.",
+    21215: "Calls to this country are not enabled (Voice geo permissions).",
+    21219: "Trial account: this number is not verified in Twilio. Verify it under Verified Caller IDs, or upgrade.",
+    21210: "The 'from' number is not a verified or owned Twilio number.",
+    21212: "The 'from' number is not a valid phone number.",
+    30003: "The phone could not be reached.",
+    30004: "The message was blocked by the guest's phone or carrier.",
+    30005: "The number does not exist or is not in service.",
+    30006: "The number is a landline or unreachable carrier.",
+    30007: "The carrier filtered the message (common for India without DLT registration).",
+    30008: "The message could not be delivered (carrier error).",
+}
+
+
+def _twilio_failure(exc: Exception, what: str) -> tuple[str, str]:
+    """Turn a Twilio exception into (message for the organizer, text for
+    the log row). Also logs the full error for the server logs."""
+
+    code = getattr(exc, "code", None)
+    twilio_message = getattr(exc, "msg", "") or str(exc)
+
+    logger.error("Twilio %s failed: code=%s message=%s", what, code, twilio_message)
+
+    hint = _TWILIO_ERROR_HINTS.get(code)
+
+    if hint:
+        shown = f"{what} failed: {hint} (Twilio code {code})"
+    elif code:
+        shown = f"{what} failed (Twilio code {code}): {twilio_message[:140]}"
+    else:
+        shown = f"{what} failed: {twilio_message[:160]}"
+
+    return shown, f"{code or ''} {twilio_message}".strip()[:255]
 
 
 def _send_via_sms(invitation, message: str, organizer=None) -> NotificationLog:
@@ -381,9 +525,19 @@ def _send_via_sms(invitation, message: str, organizer=None) -> NotificationLog:
         status=NotificationLog.Status.LINK_GENERATED,
     )
 
-    account_sid = config("TWILIO_ACCOUNT_SID")
-    auth_token = config("TWILIO_AUTH_TOKEN")
+    account_sid = config("TWILIO_ACCOUNT_SID", default="")
+    auth_token = config("TWILIO_AUTH_TOKEN", default="")
     from_number = config("TWILIO_SMS_FROM_NUMBER", default=config("TWILIO_FROM_NUMBER", default=""))
+
+    if not (account_sid and auth_token and from_number):
+        log.status = NotificationLog.Status.FAILED
+        log.failure_reason = "Twilio SMS is not configured (SID, token or from number missing)."
+        log.save(update_fields=["status", "failure_reason", "updated_at"])
+
+        raise NotificationError(
+            "SMS isn't set up yet. Please contact support.",
+            code="sms_not_configured",
+        )
 
     try:
         client = Client(account_sid, auth_token)
@@ -395,14 +549,13 @@ def _send_via_sms(invitation, message: str, organizer=None) -> NotificationLog:
         )
 
     except Exception as exc:
+        shown, reason = _twilio_failure(exc, "SMS")
+
         log.status = NotificationLog.Status.FAILED
-        log.failure_reason = str(exc)[:255]
+        log.failure_reason = reason
         log.save(update_fields=["status", "failure_reason", "updated_at"])
 
-        raise NotificationError(
-            "Failed to send SMS. Please try again.",
-            code="sms_send_failed",
-        )
+        raise NotificationError(shown, code="sms_send_failed")
 
     log.status = NotificationLog.Status.SENT
     log.save(update_fields=["status", "updated_at"])
@@ -425,14 +578,17 @@ def _send_via_voice_call(invitation, message: str, organizer=None) -> Notificati
         status=NotificationLog.Status.CALLING,
     )
 
-    account_sid = config("TWILIO_ACCOUNT_SID")
-    auth_token = config("TWILIO_AUTH_TOKEN")
-    from_number = config("TWILIO_FROM_NUMBER")
+    account_sid = config("TWILIO_ACCOUNT_SID", default="")
+    auth_token = config("TWILIO_AUTH_TOKEN", default="")
+    from_number = config("TWILIO_FROM_NUMBER", default="")
     public_backend_url = config("PUBLIC_BACKEND_URL", default="").rstrip("/")
 
-    if not public_backend_url:
+    if not (account_sid and auth_token and from_number and public_backend_url):
         log.status = NotificationLog.Status.FAILED
-        log.failure_reason = "PUBLIC_BACKEND_URL is not configured - cannot build a Twilio-reachable callback URL."
+        log.failure_reason = (
+            "Voice calling is not configured (Twilio SID / token / from number "
+            "or PUBLIC_BACKEND_URL missing)."
+        )
         log.save(update_fields=["status", "failure_reason", "updated_at"])
 
         raise NotificationError(
@@ -456,14 +612,13 @@ def _send_via_voice_call(invitation, message: str, organizer=None) -> Notificati
         )
 
     except Exception as exc:
+        shown, reason = _twilio_failure(exc, "Call")
+
         log.status = NotificationLog.Status.FAILED
-        log.failure_reason = str(exc)[:255]
+        log.failure_reason = reason
         log.save(update_fields=["status", "failure_reason", "updated_at"])
 
-        raise NotificationError(
-            "Failed to place the call. Please try again.",
-            code="voice_call_failed",
-        )
+        raise NotificationError(shown, code="voice_call_failed")
 
     log.call_sid = call.sid
     log.save(update_fields=["call_sid", "updated_at"])

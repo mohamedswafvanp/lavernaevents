@@ -756,8 +756,8 @@ function FillTemplateDialog({
                     textColor={textColor}
                   />
                   <p className="mt-2 text-xs text-slate-400">
-                    Close to the final card. After you confirm, the exact card is drawn and shown on
-                    this page.
+                    "Guest Name" is a sample. When you send, each guest's own name is written at the
+                    top of their card automatically ("Hi Rahul,", "Hi Aisha,"...).
                   </p>
                 </div>
               </div>
@@ -868,16 +868,15 @@ function LiveCardPreview({
         ) : (
           <>
             <p
-              className="font-semibold uppercase"
+              style={{ fontFamily: bodyFamily, fontSize: "4.2cqw", fontWeight: 600 }}
+            >
+              Hi Guest Name,
+            </p>
+            <p
+              className="mt-[2%] font-semibold uppercase"
               style={{ fontFamily: "'Montserrat', sans-serif", fontSize: "2.4cqw", letterSpacing: "0.3em" }}
             >
               You are invited
-            </p>
-            <p
-              className="mt-[3%]"
-              style={{ fontFamily: bodyFamily, fontSize: "4.2cqw", fontWeight: 600 }}
-            >
-              Dear Guest Name,
             </p>
             <p
               className="mt-[3%] leading-tight"
