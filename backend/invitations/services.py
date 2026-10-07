@@ -1,5 +1,6 @@
 import base64
 import io
+import logging
 import re
 import secrets
 from datetime import datetime
@@ -12,6 +13,9 @@ from memberships.utils import LimitExceededError, check_template_limit
 from PIL import Image, ImageDraw, ImageFilter, ImageFont, ImageStat
 
 from .models import ActiveFilledTemplate, Invitation, InvitationTemplate
+
+
+logger = logging.getLogger(__name__)
 
 
 class InvitationError(Exception):
@@ -199,7 +203,17 @@ def _load_font(file_name: str | None, weight: int | None, size: int, bold_fallba
     candidates = []
 
     if file_name:
-        candidates.append(str(_FONT_DIR / file_name))
+        font_path = _FONT_DIR / file_name
+
+        if not font_path.exists():
+            logger.warning(
+                "Invitation font %s is missing from %s - the card falls back to "
+                "DejaVu. Download the fonts into that folder.",
+                file_name,
+                _FONT_DIR,
+            )
+
+        candidates.append(str(font_path))
 
     candidates += _FALLBACK_BOLD if bold_fallback else _FALLBACK_REGULAR
 
@@ -322,7 +336,7 @@ def _compose_invitation_image(
 
     The organizer's font colour and font style (context["text_color"],
     context["font_style"]) are honoured. Without body_text a designed
-    default layout is drawn: "YOU ARE INVITED", guest name, big event
+    default layout is drawn: "Hi <guest name>,", "YOU ARE INVITED", big event
     title, a divider and then Date / Time / Venue blocks (plus the
     template's custom fields). With body_text, that text (placeholders
     filled) is drawn instead, in the chosen font and colour.
@@ -358,12 +372,16 @@ def _compose_invitation_image(
             rows.append(("text", line, fonts["body"], 0 if line else int(body_lh * 0.4)))
 
     else:
-        rows.append(("label", "YOU ARE INVITED", fonts["label"], int(height * 0.022)))
-
+        # The greeting sits at the very top. The name is the guest this
+        # copy of the card is being made for, so every guest gets their own
+        # "Hi <name>," when the invitation is sent.
         guest_name = str(context.get("guest_name", "")).strip()
 
         if guest_name:
-            rows.append(("text", f"Dear {guest_name},", fonts["name"], int(height * 0.018)))
+            for line in _wrap_text(draw, f"Hi {guest_name},", fonts["name"], max_text_width):
+                rows.append(("text", line, fonts["name"], int(height * 0.012)))
+
+        rows.append(("label", "YOU ARE INVITED", fonts["label"], int(height * 0.022)))
 
         title = str(context.get("event_name", ""))
         title_font = fonts["title"]
