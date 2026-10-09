@@ -16,6 +16,25 @@ from .models import User
 from .services import get_user_by_mobile
 
 
+def _reject_impossible_indian_mobile(mobile: str) -> None:
+    """Indian mobile numbers start with 6, 7, 8 or 9, so a 10-digit number
+    (or +91 plus 10 digits) starting with anything else - like the classic
+    1234567890 - can never receive an SMS or call. Numbers from other
+    countries are left alone."""
+
+    digits = re.sub(r"\D", "", mobile)
+
+    if len(digits) == 12 and digits.startswith("91"):
+        national = digits[2:]
+    elif len(digits) == 10:
+        national = digits
+    else:
+        return
+
+    if national[0] not in "6789" or len(set(national)) == 1:
+        raise serializers.ValidationError("Enter a valid mobile number.")
+
+
 def _normalize_mobile_input(value: str) -> str:
     """Accept 9188560170, +91 91885 60170, 09188560170 ... and return the
     one canonical form stored on the user."""
@@ -36,6 +55,8 @@ def _normalize_mobile_input(value: str) -> str:
         raise serializers.ValidationError(
             "Mobile number must contain between 10 and 15 digits."
         )
+
+    _reject_impossible_indian_mobile(mobile)
 
     return mobile
 

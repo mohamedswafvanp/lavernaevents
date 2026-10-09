@@ -100,6 +100,8 @@ export default function GuestImportExport({ eventId }: GuestImportExportProps) {
           ref={fileInputRef}
           type="file"
           accept=".csv,text/csv"
+          aria-label="Choose a CSV file of guests to import"
+          tabIndex={-1}
           className="sr-only"
           onChange={handleFileChange}
         />
@@ -134,7 +136,7 @@ export default function GuestImportExport({ eventId }: GuestImportExportProps) {
             <button
               type="button"
               onClick={() => setImportResult(null)}
-              className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-600"
               aria-label="Dismiss"
             >
               <X className="h-3.5 w-3.5" />

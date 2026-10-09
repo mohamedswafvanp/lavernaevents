@@ -1,10 +1,13 @@
 from django.core.exceptions import ValidationError as DjangoValidationError
+from urllib.parse import quote
+
 from rest_framework import serializers
 
 from common.validators import validate_image_content
 from gallery.models import GalleryMedia
 
 from .models import EventQRCode
+from .download_tokens import make_download_token
 from .services import build_scan_url, public_backend_url
 
 
@@ -121,7 +124,9 @@ class GuestMediaSerializer(serializers.ModelSerializer):
 
     def get_download_url(self, media) -> str:
         token = self.context["token"]
-        return f"/api/qr/{token}/media/{media.id}/download/"
+        signed = quote(make_download_token(token, media.id), safe="")
+        # The signature (?t=) is what authorises this one download.
+        return f"/api/qr/{token}/media/{media.id}/download/?t={signed}"
 
 
 class SelfieMatchResultSerializer(serializers.Serializer):

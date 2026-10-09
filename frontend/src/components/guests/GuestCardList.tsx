@@ -437,6 +437,7 @@ export default function GuestCardList({ eventId }: GuestCardListProps) {
 
           <div className="hidden items-center gap-3 lg:flex">
             <Select
+              aria-label="Filter by response"
               value={responseFilter}
               onChange={(e) => setResponseFilter(e.target.value as ResponseStatus | "")}
               className="w-44"
@@ -448,6 +449,7 @@ export default function GuestCardList({ eventId }: GuestCardListProps) {
               ))}
             </Select>
             <Select
+              aria-label="Filter by invitation status"
               value={invitationFilter}
               onChange={(e) => setInvitationFilter(e.target.value as InvitationStatus | "")}
               className="w-44"
@@ -483,6 +485,7 @@ export default function GuestCardList({ eventId }: GuestCardListProps) {
         {filtersOpen && (
           <div className="mt-3 space-y-2 rounded-2xl border border-slate-100 bg-white p-3 lg:hidden">
             <Select
+              aria-label="Filter by response"
               value={responseFilter}
               onChange={(e) => setResponseFilter(e.target.value as ResponseStatus | "")}
             >
@@ -493,6 +496,7 @@ export default function GuestCardList({ eventId }: GuestCardListProps) {
               ))}
             </Select>
             <Select
+              aria-label="Filter by invitation status"
               value={invitationFilter}
               onChange={(e) => setInvitationFilter(e.target.value as InvitationStatus | "")}
             >
@@ -720,7 +724,7 @@ export default function GuestCardList({ eventId }: GuestCardListProps) {
                     <button
                       type="button"
                       onClick={() => openEdit(guest)}
-                      className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-[var(--brand-navy)]"
+                      className="flex h-10 w-10 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-[var(--brand-navy)]"
                       aria-label="Edit guest"
                     >
                       <Pencil className="h-3.5 w-3.5" />
@@ -728,7 +732,7 @@ export default function GuestCardList({ eventId }: GuestCardListProps) {
                     <button
                       type="button"
                       onClick={() => setDeleteTarget(guest)}
-                      className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-600"
+                      className="flex h-10 w-10 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-600"
                       aria-label="Remove guest"
                     >
                       <Trash2 className="h-3.5 w-3.5" />

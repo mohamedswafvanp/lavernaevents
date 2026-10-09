@@ -1,3 +1,5 @@
+from datetime import time
+
 from rest_framework import serializers
 
 from .models import Event
@@ -106,6 +108,28 @@ class EventSerializer(serializers.ModelSerializer):
 
     # ----- object level ------------------------------------------------
 
+    # There is no end *date*, so an end time earlier than the start time is
+    # read as "after midnight" - fine for a wedding that finishes at 1 AM, but
+    # not for one that "ends" at 10 AM after a 6 PM start.
+    OVERNIGHT_LATEST_END = time(6, 0)
+
+    def _validate_end_time(self, attrs: dict) -> None:
+        start = attrs.get("event_time", getattr(self.instance, "event_time", None))
+        end = attrs.get("event_end_time", getattr(self.instance, "event_end_time", None))
+
+        if not start or not end:
+            return
+
+        if end == start:
+            raise serializers.ValidationError(
+                {"event_end_time": "The end time must be different from the start time."}
+            )
+
+        if end < start and end > self.OVERNIGHT_LATEST_END:
+            raise serializers.ValidationError(
+                {"event_end_time": "The end time can't be before the start time."}
+            )
+
     def validate(self, attrs: dict) -> dict:
         """Require a custom label when event_type is CUSTOM."""
 
@@ -127,6 +151,8 @@ class EventSerializer(serializers.ModelSerializer):
                     )
                 }
             )
+
+        self._validate_end_time(attrs)
 
         # The label only means something for CUSTOM events.
         if event_type != Event.EventType.CUSTOM and "event_type" in attrs:

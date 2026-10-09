@@ -172,15 +172,15 @@ function UserActions({
 }) {
   return (
     <div className="flex items-center justify-end gap-1.5">
-      <Button variant="ghost" size="icon" onClick={onEdit} aria-label="Edit user">
+      <Button variant="ghost" size="icon" className="h-10 w-10" onClick={onEdit} aria-label="Edit user">
         <Pencil className="h-4 w-4" />
       </Button>
       {!isSelf && (
         <>
-          <Button variant="ghost" size="icon" disabled={busy} onClick={onToggleSuspend} aria-label={user.is_suspended ? "Unsuspend user" : "Suspend user"}>
+          <Button variant="ghost" size="icon" className="h-10 w-10" disabled={busy} onClick={onToggleSuspend} aria-label={user.is_suspended ? "Unsuspend user" : "Suspend user"}>
             {user.is_suspended ? <CheckCircle2 className="h-4 w-4 text-emerald-600" /> : <Ban className="h-4 w-4 text-amber-600" />}
           </Button>
-          <Button variant="ghost" size="icon" onClick={onDelete} aria-label="Delete user">
+          <Button variant="ghost" size="icon" className="h-10 w-10" onClick={onDelete} aria-label="Delete user">
             <Trash2 className="h-4 w-4 text-rose-600" />
           </Button>
         </>
@@ -200,6 +200,7 @@ export default function UserManagement() {
 
   const [editingUser, setEditingUser] = useState<AdminUser | null>(null);
   const [deletingUser, setDeletingUser] = useState<AdminUser | null>(null);
+  const [suspendingUser, setSuspendingUser] = useState<AdminUser | null>(null);
 
   const { data, isLoading, isError } = useAdminUsers({
     page,
@@ -212,12 +213,25 @@ export default function UserManagement() {
   const deleteMutation = useDeleteAdminUserMutation();
   const statusBusy = suspendMutation.isPending || unsuspendMutation.isPending;
 
-  const handleToggleSuspend = (user: AdminUser) => {
+  const runToggleSuspend = (user: AdminUser) => {
     const mutation = user.is_suspended ? unsuspendMutation : suspendMutation;
     mutation.mutate(user.id, {
-      onSuccess: () => toastStore.show(user.is_suspended ? "User unsuspended." : "User suspended."),
-      onError: (error) => toastStore.show(getApiErrorMessage(error, "Could not update user status."), "error"),
+      onSuccess: () => {
+        toastStore.show(user.is_suspended ? "User unsuspended." : "User suspended.");
+        setSuspendingUser(null);
+      },
+      onError: (error) => {
+        toastStore.show(getApiErrorMessage(error, "Could not update user status."), "error");
+        setSuspendingUser(null);
+      },
     });
+  };
+
+  // Suspending locks someone out immediately, so it asks first. Unsuspending is
+  // harmless and goes straight through.
+  const handleToggleSuspend = (user: AdminUser) => {
+    if (user.is_suspended) runToggleSuspend(user);
+    else setSuspendingUser(user);
   };
 
   const handleDelete = () => {
@@ -248,6 +262,7 @@ export default function UserManagement() {
           <div className="relative flex-1">
             <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <Input
+              aria-label="Search users"
               placeholder="Search by name, email, or mobile number"
               value={search}
               onChange={(e) => {
@@ -258,6 +273,7 @@ export default function UserManagement() {
             />
           </div>
           <Select
+            aria-label="Filter by role"
             value={roleFilter}
             onChange={(e) => {
               setRoleFilter(e.target.value as UserRole | "");
@@ -386,6 +402,17 @@ export default function UserManagement() {
       )}
 
       {editingUser && <EditUserDialog user={editingUser} isSelf={editingUser.id === currentUserId} onClose={() => setEditingUser(null)} />}
+
+      <ConfirmDialog
+        open={!!suspendingUser}
+        title="Suspend this user?"
+        description={`"${suspendingUser?.full_name}" will be signed out and blocked from logging in until you unsuspend them. Their data is kept.`}
+        confirmLabel="Suspend"
+        destructive
+        isLoading={suspendMutation.isPending}
+        onConfirm={() => suspendingUser && runToggleSuspend(suspendingUser)}
+        onCancel={() => setSuspendingUser(null)}
+      />
 
       <ConfirmDialog
         open={!!deletingUser}

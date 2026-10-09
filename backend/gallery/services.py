@@ -1,6 +1,7 @@
 import io
 import logging
 import os
+import uuid
 
 from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
@@ -23,6 +24,26 @@ MAX_IMAGE_PIXELS = 60_000_000
 # Grid thumbnails: a 5 MB original in a 150px tile wastes mobile data and
 # makes the gallery crawl, so every image gets a small JPEG preview.
 THUMBNAIL_EDGE = 480
+
+
+_KEEP_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".mp4", ".mov", ".webm"}
+
+
+def random_filename(original_name: str, default_extension: str) -> str:
+    """A new unguessable file name (32 random hex characters).
+
+    Gallery files sit in a public bucket, so the only thing keeping a stranger
+    from opening someone's photos is not knowing the address. The original
+    name ("face1.jpeg", "wedding-final-3.jpg") is never reused: it is both
+    guessable and often reveals who is in the photo.
+    """
+
+    extension = os.path.splitext(original_name or "")[1].lower()
+
+    if extension not in _KEEP_EXTENSIONS:
+        extension = default_extension
+
+    return f"{uuid.uuid4().hex}{extension}"
 
 
 class GalleryError(Exception):
@@ -135,9 +156,7 @@ def _check_image_and_make_thumbnail(file) -> ContentFile:
     finally:
         file.seek(0)
 
-    stem = os.path.splitext(os.path.basename(getattr(file, "name", "") or "photo"))[0][:60] or "photo"
-
-    return ContentFile(buffer.getvalue(), name=f"{stem}.jpg")
+    return ContentFile(buffer.getvalue(), name=random_filename("", ".jpg"))
 
 
 def upload_media(
@@ -170,6 +189,15 @@ def upload_media(
             f"That file is too large. {'Photos' if is_image else 'Videos'} can be up to {cap // MB} MB.",
             code="file_too_large",
         )
+
+    # Store everything under random names (see random_filename).
+    try:
+        file.name = random_filename(getattr(file, "name", ""), ".jpg" if is_image else ".mp4")
+
+        if thumbnail is not None:
+            thumbnail.name = random_filename(getattr(thumbnail, "name", ""), ".jpg")
+    except AttributeError:  # an object whose name cannot be changed keeps its own
+        pass
 
     # Images are always verified; the thumbnail is only used when the client sent none.
     generated_thumbnail = _check_image_and_make_thumbnail(file) if is_image else None

@@ -307,6 +307,11 @@ class EventNotificationLogListView(ListAPIView):
         ).select_related("guest", "invitation__template")
 
     def list(self, request, *args, **kwargs):
+        # Someone else's (or a missing) event is a 404, like every other
+        # event-scoped endpoint - not an empty 200 that hides the difference.
+        if get_owned_event_or_none(self.kwargs["event_pk"], request.user) is None:
+            return _event_not_found_response()
+
         queryset = self.get_queryset()
 
         page = self.paginate_queryset(queryset)

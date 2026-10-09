@@ -30,14 +30,27 @@ export const authKeys = {
 };
 
 export function useCurrentUser() {
+  // A browser that is known to be logged out (the last check said so, or the
+  // person signed out) skips the /auth/me/ + /auth/refresh/ calls, which
+  // would only 401 and fill the console. No hint at all (first visit) still
+  // asks the server, so an existing session is never missed.
+  const mayHaveSession = authStore.hasSessionHint();
+
   const query = useQuery<User | null>({
     queryKey: authKeys.currentUser,
     queryFn: getCurrentUser,
+    enabled: mayHaveSession,
     retry: false,
     staleTime: 5 * 60 * 1000,
   });
 
   useEffect(() => {
+    if (!mayHaveSession && !query.data) {
+      authStore.setUser(null);
+      authStore.setChecking(false);
+      return;
+    }
+
     if (query.isSuccess) {
       authStore.setUser(query.data);
       authStore.setChecking(false);
@@ -45,7 +58,7 @@ export function useCurrentUser() {
       authStore.setUser(null);
       authStore.setChecking(false);
     }
-  }, [query.isSuccess, query.isError, query.data]);
+  }, [mayHaveSession, query.isSuccess, query.isError, query.data]);
 
   return query;
 }

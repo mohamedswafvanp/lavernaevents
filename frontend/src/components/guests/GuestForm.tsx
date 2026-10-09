@@ -2,7 +2,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { isAxiosError } from "axios";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AlertTriangle, X } from "lucide-react";
 import { Link } from "react-router-dom";
 import { FormError } from "@/components/ui/card";
@@ -82,27 +82,38 @@ export default function GuestForm({
 
   const [categoryId, setCategoryId] = useState<string>("");
 
+  // Reset the fields only when the dialog OPENS or switches to a different
+  // guest. The old effect also depended on the existingGuest object itself,
+  // so a background refetch (new object, same guest) wiped what the person
+  // was typing, and a reset racing the first render could leave the previous
+  // guest's values in an "Add" dialog. The latest guest is read through a ref.
+  const guestRef = useRef(existingGuest);
+  guestRef.current = existingGuest;
+  const guestId = existingGuest?.id ?? null;
+
   useEffect(() => {
-    if (open) {
-      reset({
-        name: existingGuest?.name ?? "",
-        mobile_number: existingGuest?.mobile_number ?? "",
-        email: existingGuest?.email ?? "",
-        family_member_count: existingGuest?.family_member_count ?? 3,
-        notes: existingGuest?.notes ?? "",
-      });
-      setCategoryId(
-        existingGuest?.category != null
-          ? String(existingGuest.category)
-          : defaultCategoryId != null
-            ? String(defaultCategoryId)
-            : ""
-      );
-      setLimitError(null);
-      setDuplicateError(null);
-      setFieldErrorsMapped(false);
-    }
-  }, [open, existingGuest, defaultCategoryId, reset]);
+    if (!open) return;
+
+    const guest = guestRef.current;
+
+    reset({
+      name: guest?.name ?? "",
+      mobile_number: guest?.mobile_number ?? "",
+      email: guest?.email ?? "",
+      family_member_count: guest?.family_member_count ?? 3,
+      notes: guest?.notes ?? "",
+    });
+    setCategoryId(
+      guest?.category != null
+        ? String(guest.category)
+        : defaultCategoryId != null
+          ? String(defaultCategoryId)
+          : ""
+    );
+    setLimitError(null);
+    setDuplicateError(null);
+    setFieldErrorsMapped(false);
+  }, [open, guestId, defaultCategoryId, reset]);
 
   const familyCount = watch("family_member_count");
 
@@ -299,7 +310,7 @@ export default function GuestForm({
               <button
                 type="button"
                 onClick={onClose}
-                className="absolute right-5 top-5 flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
+                className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
                 aria-label="Close"
               >
                 <X className="h-4 w-4" />

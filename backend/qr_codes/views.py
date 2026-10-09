@@ -12,6 +12,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from .download_tokens import download_token_is_valid
 from .serializers import (
     EventQRCodeSerializer,
     QRCodeActiveSerializer,
@@ -212,13 +213,19 @@ class GuestMediaDownloadView(APIView):
     origin (browsers ignore the `download` attribute there), so phones
     just open the picture instead of saving it. Serving it from here with
     Content-Disposition: attachment makes the Download button really
-    download. The photo must belong to the QR code's own event.
+    download. The photo must belong to the QR code's own event AND the
+    link must carry the signed token (?t=) that the selfie search issued
+    for exactly this photo - otherwise ids could simply be counted up.
     """
 
     permission_classes = [AllowAny]
 
     def get(self, request, token, media_id):
         qr_code = resolve_active_qr_code(token)
+
+        # Same answer for "no such photo" and "not yours", so nothing leaks.
+        if not download_token_is_valid(request.query_params.get("t", ""), token, media_id):
+            raise Http404("File not found.")
 
         media = get_object_or_404(GalleryMedia, pk=media_id, event=qr_code.event)
 

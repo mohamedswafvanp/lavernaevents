@@ -48,6 +48,15 @@
     --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/* Accessibility: Tailwind's default slate-400 (#94a3b8) is about 2.6:1 on
+   white and slate-500 is borderline. Both are used for real text across the
+   app, so they are darkened once here (WCAG AA needs 4.5:1) instead of
+   editing every page. */
+@theme {
+  --color-slate-400: #64748b;
+  --color-slate-500: #4f5d73;
+}
+
 :root {
 
   /* Core brand - values unchanged from before, only expanded with new tokens */
@@ -340,5 +349,36 @@
   .animate-float-slow,
   .animate-scan {
     animation: none;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Accessibility (Phase 16)                                            */
+/* ------------------------------------------------------------------ */
+
+/* Unlayered on purpose: nav links use utility classes that remove the
+   outline, and the :where() rule above has zero specificity, so sidebar and
+   tab-bar links showed no keyboard focus. This one always wins. */
+a:focus-visible,
+button:focus-visible,
+select:focus-visible,
+summary:focus-visible,
+[role="button"]:focus-visible,
+[role="tab"]:focus-visible {
+  outline: 2px solid var(--brand-pink);
+  outline-offset: 2px;
+}
+
+/* Touch devices and small screens: keep buttons at least 40px tall, and
+   icon-only buttons 40px square, so they are easy to hit. */
+@media (pointer: coarse), (max-width: 1023px) {
+  button,
+  [role="button"],
+  select {
+    min-height: 2.5rem;
+  }
+
+  button:has(> svg:only-child) {
+    min-width: 2.5rem;
   }
 }

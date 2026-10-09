@@ -2,6 +2,7 @@ from gallery.models import GalleryMedia
 from invitations.models import InvitationTemplate
 from memberships.models import MembershipPlan
 from memberships.topup_models import PlatformChannelPool, PlatformPoolTopup, TopupPack
+from common.validators import validate_image_content
 from rest_framework import serializers
 from users.models import User
 from users.services import get_user_by_mobile
@@ -219,10 +220,27 @@ class AdminInvitationTemplateSerializer(serializers.ModelSerializer):
         return value
 
     def validate_preview_image(self, value):
+        if value is not None:
+            validate_image_content(value)
+
         return self._check_image_size(value)
 
     def validate_background_image(self, value):
+        if value is not None:
+            validate_image_content(value)
+
         return self._check_image_size(value)
+
+    def validate(self, attrs: dict) -> dict:
+        """A new library template needs its card design, otherwise organizers
+        would pick a blank template that cannot render an invitation."""
+
+        if self.instance is None and not attrs.get("background_image"):
+            raise serializers.ValidationError(
+                {"background_image": "Upload the template's background image."}
+            )
+
+        return attrs
 
 
 # --------------------------------------------------

@@ -54,6 +54,7 @@ export default function MediaManagement() {
           </p>
         </div>
         <Select
+          aria-label="Filter by media type"
           value={mediaType}
           onChange={(e) => {
             setMediaType(e.target.value as "IMAGE" | "VIDEO" | "");
@@ -97,7 +98,7 @@ export default function MediaManagement() {
                 <button
                   type="button"
                   onClick={() => setDeletingMedia(item)}
-                  className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-rose-600 shadow-sm"
+                  className="absolute right-1.5 top-1.5 flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-rose-600 shadow-sm"
                   aria-label="Delete media"
                 >
                   <Trash2 className="h-4 w-4" />

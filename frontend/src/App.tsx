@@ -8,6 +8,7 @@ import { authStore, useAuthStore } from "./stores/auth.store";
 import { isNativeApp } from "./lib/platform";
 import { Skeleton } from "./components/ui/skeleton";
 import AppErrorBoundary from "./components/common/AppErrorBoundary";
+import { usePublicRouteTitle } from "./hooks/useRouteTitle";
 
 import PublicLayout from "./layouts/PublicLayout";
 import ProtectedRoute from "./router/ProtectedRoute";
@@ -66,6 +67,13 @@ const AdminMediaManagement = lazy(() => import("./pages/admin/MediaManagement"))
 const AdminChannelPools = lazy(() => import("./pages/admin/ChannelPools"));
 const AdminTopupPacks = lazy(() => import("./pages/admin/TopupPacks"));
 const AdminReports = lazy(() => import("./pages/admin/Reports"));
+
+// Titles for the public / auth / payment pages. Portal, admin and
+// photographer pages are titled by their own layout.
+function PublicRouteTitle() {
+  usePublicRouteTitle();
+  return null;
+}
 
 function SessionBootstrap() {
   useCurrentUser();
@@ -292,6 +300,7 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <SessionBootstrap />
+        <PublicRouteTitle />
         <AppErrorBoundary>
           <AppRoutes />
         </AppErrorBoundary>
