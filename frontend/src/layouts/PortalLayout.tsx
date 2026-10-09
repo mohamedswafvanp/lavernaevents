@@ -75,7 +75,9 @@ export default function PortalLayout() {
   }
 
   if (access.next_step === "verify_mobile") {
-    const mobileParam = user?.mobile_number ? `?mobile=${user.mobile_number}` : "";
+    const mobileParam = user?.mobile_number
+      ? `?mobile=${encodeURIComponent(user.mobile_number)}`
+      : "";
     return <Navigate to={`/verify-mobile${mobileParam}`} replace />;
   }
 
